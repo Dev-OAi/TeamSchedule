@@ -156,14 +156,16 @@
                         <div class="flex gap-2">
                             <select id="sched-location-presets" class="p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none w-1/2">
                                 <option value="">-- Blank --</option>
-                                <option value="Teller">Teller</option>
-                                <option value="Platform">Platform</option>
-                                <option value="Boca">Boca</option>
+                                <option value="open">Open Branch</option>
+                                <option value="close">Close Branch</option>
+                               <!--   <option value="Teller">Teller</option> -->
+                                <!--  <option value="Platform">Platform</option> -->
                                 <option value="Call Night">Call Night</option>
                                 <option value="Special Assignment">Special Assignment</option>
-                                <option value="Charleston Square">Charleston Square</option>
-                                <option value="Wellington">Wellington</option>
                                 <option value="Custom">-- Custom Title --</option>
+                                <option value="Boca">Boca</option>
+                                <option value="West Palm Beach">West Palm Beach</option>
+                               
                             </select>
                             <input type="text" id="sched-location-custom" placeholder="Custom Title" class="w-1/2 p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none">
                         </div>
@@ -210,7 +212,7 @@
                 <!-- Role / Tag Override -->
                 <div>
                     <label for="sched-role" class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Role / Department Tag (Optional)</label>
-                    <input type="text" id="sched-role" placeholder="e.g. Teller, Platform, BM (Leave blank for default)" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none">
+                    <input type="text" id="sched-role" placeholder="e.g. Teller, Platform, (Leave blank for default)" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none">
                 </div>
                 
                 <!-- Save Buttons -->
@@ -921,10 +923,10 @@
                             <label class="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">Card Theme Color</label>
                             <select data-emp-id="${emp.id}" data-field="cardColor" class="emp-edit-select p-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none w-full bg-white">
                                 <option value="white" ${emp.cardColor === 'white' ? 'selected' : ''}>White (Default)</option>
-                                <option value="gray" ${emp.cardColor === 'gray' ? 'selected' : ''}>Gray (BM / ABM)</option>
-                                <option value="blue" ${emp.cardColor === 'blue' ? 'selected' : ''}>Light Blue (BOC)</option>
-                                <option value="yellow" ${emp.cardColor === 'yellow' ? 'selected' : ''}>Gold / Yellow (FSA)</option>
-                                <option value="green" ${emp.cardColor === 'green' ? 'selected' : ''}>Mint Green (Teller)</option>
+                                <option value="gray" ${emp.cardColor === 'gray' ? 'selected' : ''}>Gray</option>
+                                <option value="blue" ${emp.cardColor === 'blue' ? 'selected' : ''}>Light Blue</option>
+                                <option value="yellow" ${emp.cardColor === 'yellow' ? 'selected' : ''}>Gold / Yellow</option>
+                                <option value="green" ${emp.cardColor === 'green' ? 'selected' : ''}>Mint Green</option>
                             </select>
                         </div>
                         <div>
@@ -1239,10 +1241,10 @@
 
     function getEmployeeBgColor(cardColor) {
         switch (cardColor) {
-            case 'gray': return 'bg-[#f3f4f6]'; // Gray (BM / ABM)
-            case 'blue': return 'bg-[#cfe2f3]'; // Light Blue (BOC)
-            case 'yellow': return 'bg-[#ffd966]'; // Gold / Yellow (FSA)
-            case 'green': return 'bg-[#d9ead3]'; // Mint Green (Teller)
+            case 'gray': return 'bg-[#f3f4f6]'; // Gray 
+            case 'blue': return 'bg-[#cfe2f3]'; // Light Blue 
+            case 'yellow': return 'bg-[#ffd966]'; // Gold / Yellow 
+            case 'green': return 'bg-[#d9ead3]'; // Mint Green
             default: return 'bg-white'; // White (Default)
         }
     }
@@ -1352,13 +1354,13 @@
                 empSched = {
                     employeeId: emp.id,
                     days: {
-                        "Mon": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
-                        "Tue": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
-                        "Wed": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
-                        "Thu": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
-                        "Fri": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
-                        "Sat": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
-                        "Sun": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' }
+                        "Mon": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
+                        "Tue": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
+                        "Wed": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
+                        "Thu": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
+                        "Fri": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
+                        "Sat": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
+                        "Sun": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' }
                     }
                 };
                 app.schedules[weekDate].push(empSched);
@@ -2013,7 +2015,7 @@
         const schedLocationPresets = document.getElementById('sched-location-presets');
         const schedLocationCustom = document.getElementById('sched-location-custom');
         const locationVal = dayData.location !== undefined ? dayData.location : '';
-        const isPreset = ['', 'Boca', 'Teller', 'Platform', 'Call Night', 'Special Assignment', 'Charleston Square', 'Wellington'].includes(locationVal);
+        const isPreset = ['', 'Open Branch', 'Close Branch', 'Teller', 'Platform', 'Call Night', 'Special Assignment', 'Boca', 'West Palm Beach'].includes(locationVal);
         
         if (isPreset) {
             schedLocationPresets.value = locationVal;
