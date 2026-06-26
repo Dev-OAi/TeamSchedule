@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Team Leave Tracker</title>
+    <title>Team Schedule</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
@@ -59,10 +59,28 @@
 <link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-gray-100">
-    <div class="min-h-screen flex font-sans">
+    <div class="min-h-screen flex font-sans relative">
+        <!-- Expand Sidebar Tab (visible when sidebar is collapsed) -->
+        <button id="sidebar-expand-btn" class="fixed left-0 top-8 z-40 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-r-xl py-3.5 px-2 flex items-center justify-center transition-all cursor-pointer focus:outline-none" title="Expand Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+        </button>
+
         <!-- Sidebar Navigation -->
-        <nav class="w-64 bg-white border-r border-gray-200 p-4 flex flex-col space-y-2">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6 px-2">Leave Tracker</h1>
+        <nav id="sidebar" class="w-64 bg-white border-r border-gray-200 p-4 flex flex-col space-y-2 transition-all duration-300 ease-in-out overflow-hidden shrink-0">
+            <div class="flex items-center justify-between mb-6 px-2">
+                <h1 class="text-xl font-extrabold tracking-tight text-gray-800">Team Schedule</h1>
+                <button id="sidebar-collapse-btn" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition" title="Hide Menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                </button>
+            </div>
+            <button data-tab="Schedule" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span class="font-medium">Team Schedule</span>
+            </button>
             <button data-tab="Dashboard" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 <span class="font-medium">Dashboard</span>
@@ -71,17 +89,13 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 <span class="font-medium">Data Log</span>
             </button>
-            <button data-tab="Schedule" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span class="font-medium">Team Schedule</span>
-            </button>
             <button data-tab="Setup" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 <span class="font-medium">Setup</span>
             </button>
         </nav>
         <!-- Main Content -->
-        <main class="flex-1 py-8 px-2 md:px-4 lg:px-2 bg-gray-100 overflow-y-auto">
+        <main id="main-content-viewport" class="flex-1 py-8 px-2 md:px-4 lg:px-2 bg-gray-100 overflow-y-auto transition-all duration-300">
             <div id="main-content" class="w-full">
                 <!-- Content will be rendered here by JavaScript -->
             </div>
@@ -124,6 +138,8 @@
                     <label for="sched-type" class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Shift Status / Type</label>
                     <select id="sched-type" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none">
                         <option value="Regular">Regular Work Shift</option>
+                        <option value="Open Branch">Open Branch</option>
+                        <option value="Close Branch">Close Branch</option>
                         <option value="OFF">OFF (Not Scheduled)</option>
                         <option value="HOLIDAY">HOLIDAY (Paid Off)</option>
                         <option value="VACATION">VACATION (Paid Off)</option>
@@ -139,6 +155,9 @@
                         <label for="sched-location" class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Location / Shift Title</label>
                         <div class="flex gap-2">
                             <select id="sched-location-presets" class="p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none w-1/2">
+                                <option value="">-- Blank --</option>
+                                <option value="Teller">Teller</option>
+                                <option value="Platform">Platform</option>
                                 <option value="Boca">Boca</option>
                                 <option value="Call Night">Call Night</option>
                                 <option value="Special Assignment">Special Assignment</option>
@@ -148,6 +167,17 @@
                             </select>
                             <input type="text" id="sched-location-custom" placeholder="Custom Title" class="w-1/2 p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none">
                         </div>
+                    </div>
+                    
+                    <!-- Shift Hours Preset Selector -->
+                    <div>
+                        <label for="sched-preset-times" class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Shift Hours Preset</label>
+                        <select id="sched-preset-times" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none bg-white">
+                            <option value="">-- Choose Hours Preset --</option>
+                            <option value="open">Open Branch (7:45 AM - 4:15 PM)</option>
+                            <option value="close">Close Branch (8:30 AM - 5:15 PM)</option>
+                            <option value="standard">Standard Shift (8:30 AM - 5:00 PM)</option>
+                        </select>
                     </div>
                     
                     <!-- Times Row -->
@@ -196,7 +226,7 @@
     <script>
     // --- APP STATE ---
     let app = {
-        activeTab: 'Dashboard',
+        activeTab: 'Schedule',
         currentYear: new Date().getFullYear(),
         dailyCalendarDate: new Date(),
         monthlyCalendarDate: new Date(),
@@ -227,7 +257,12 @@
         ],
         schedules: {},
         scheduleWeekDate: '',
-        scheduleViewMode: 'editor'
+        scheduleViewMode: 'editor',
+        showCoverageTotals: false,
+        defaultShiftIn: '08:30',
+        defaultShiftOut: '17:00',
+        defaultBreakMins: 45,
+        defaultShiftPreset: 'standard'
     };
 
     // --- DOM ELEMENTS ---
@@ -257,7 +292,7 @@
             try {
                 const parsedData = JSON.parse(savedData);
                 const defaultState = {
-                    activeTab: 'Dashboard',
+                    activeTab: 'Schedule',
                     currentYear: new Date().getFullYear(),
                     dailyCalendarDate: new Date(),
                     monthlyCalendarDate: new Date(),
@@ -271,6 +306,11 @@
                     schedules: {},
                     scheduleWeekDate: '',
                     scheduleViewMode: 'editor',
+                    showCoverageTotals: false,
+                    defaultShiftIn: '08:30',
+                    defaultShiftOut: '17:00',
+                    defaultBreakMins: 45,
+                    defaultShiftPreset: 'standard',
                     ...parsedData
                 };
                 
@@ -902,7 +942,104 @@
         const leaveTypeListItems = app.leaveTypes.map(lt => `
             <li class="py-3 flex justify-between items-center space-x-4"><div class="flex-grow"><span contenteditable="true" data-lt-id="${lt.id}" data-field="name" class="p-1 rounded-md hover:bg-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-md font-medium text-gray-800">${lt.name}</span></div><div class="flex items-center space-x-3"><input type="color" value="${lt.color || '#6b7280'}" data-lt-id="${lt.id}" data-field="color" class="w-8 h-8 p-0 border-none rounded-md cursor-pointer" aria-label="Change color for ${lt.name}"><input type="text" value="${lt.durationHHMM}" data-lt-id="${lt.id}" data-field="durationHHMM" class="w-20 p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-center" placeholder="HH:MM"><button data-lt-id="${lt.id}" class="delete-leavetype text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-gray-100" aria-label="Delete ${lt.name}">${trashIcon}</button></div></li>`).join('');
         
-        mainContent.innerHTML = `<div><h1 class="text-3xl font-bold text-gray-800 mb-6">Setup</h1><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="bg-white p-6 shadow-lg rounded-xl"><h2 class="text-xl font-semibold text-gray-700 mb-4">Employee List</h2><form id="add-employee-form" class="space-y-4 mb-6 bg-gray-50/50 p-4 border border-gray-200/60 rounded-xl"><div class="grid grid-cols-2 gap-3"><div><label for="name" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Name</label><input type="text" name="name" placeholder="Name" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold" required></div><div><label for="role" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Role / Title</label><input type="text" name="role" placeholder="e.g. FSA" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold" required></div></div><div class="grid grid-cols-2 gap-3"><div><label for="cardColor" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Card Theme Color</label><select name="cardColor" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold bg-white"><option value="white">White (Default)</option><option value="gray">Gray (BM / ABM)</option><option value="blue">Light Blue (BOC)</option><option value="yellow">Gold / Yellow (FSA)</option><option value="green">Mint Green (Teller)</option></select></div><div><label for="vacationAllotment" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Vacation (Days)</label><input type="number" name="vacationAllotment" value="15" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold" required></div></div><button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-bold shadow-md transition">Add Employee</button></form><div class="mt-4 border-t border-gray-200"><ul class="divide-y divide-gray-200">${employeeListItems}</ul></div></div><div class="bg-white p-6 shadow-lg rounded-xl"><h2 class="text-xl font-semibold text-gray-700 mb-4">Absence Types</h2><p class="text-sm text-gray-500 mb-4">Edit names, duration (HH:MM), and color.</p><div class="border-t border-gray-200"><ul id="leave-type-list" class="divide-y divide-gray-200">${leaveTypeListItems}</ul></div><div class="mt-4"><button id="add-leave-type-btn" class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 font-semibold shadow-sm">Add New Type</button></div></div></div></div>`;
+        mainContent.innerHTML = `
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-6">Setup</h1>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Employee List Card -->
+                    <div class="bg-white p-6 shadow-lg rounded-xl">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Employee List</h2>
+                        <form id="add-employee-form" class="space-y-4 mb-6 bg-gray-50/50 p-4 border border-gray-200/60 rounded-xl">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="name" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Name</label>
+                                    <input type="text" name="name" placeholder="Name" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold" required>
+                                </div>
+                                <div>
+                                    <label for="role" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Role / Title</label>
+                                    <input type="text" name="role" placeholder="e.g. FSA" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold" required>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="cardColor" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Card Theme Color</label>
+                                    <select name="cardColor" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold bg-white">
+                                        <option value="white">White (Default)</option>
+                                        <option value="gray">Gray (BM / ABM)</option>
+                                        <option value="blue">Light Blue (BOC)</option>
+                                        <option value="yellow">Gold / Yellow (FSA)</option>
+                                        <option value="green">Mint Green (Teller)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="vacationAllotment" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Vacation (Days)</label>
+                                    <input type="number" name="vacationAllotment" value="15" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-bold shadow-md transition">Add Employee</button>
+                        </form>
+                        <div class="mt-4 border-t border-gray-200">
+                            <ul class="divide-y divide-gray-200">${employeeListItems}</ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column (Absence Types & Default Shift Settings) -->
+                    <div class="space-y-8">
+                        <!-- Absence Types Card -->
+                        <div class="bg-white p-6 shadow-lg rounded-xl">
+                            <h2 class="text-xl font-semibold text-gray-700 mb-4">Absence Types</h2>
+                            <p class="text-sm text-gray-500 mb-4">Edit names, duration (HH:MM), and color.</p>
+                            <div class="border-t border-gray-200">
+                                <ul id="leave-type-list" class="divide-y divide-gray-200">${leaveTypeListItems}</ul>
+                            </div>
+                            <div class="mt-4">
+                                <button id="add-leave-type-btn" class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 font-semibold shadow-sm">Add New Type</button>
+                            </div>
+                        </div>
+
+                        <!-- Default Shift Settings Card -->
+                        <div class="bg-white p-6 shadow-lg rounded-xl">
+                            <h2 class="text-xl font-semibold text-gray-700 mb-4">Default Shift Settings</h2>
+                            <p class="text-sm text-gray-500 mb-4">Set default hours and meal break for new shifts and automated fills.</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="default-preset" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Default Shift Preset</label>
+                                    <select id="default-preset" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 bg-white">
+                                        <option value="custom" ${(app.defaultShiftPreset === 'custom' || !app.defaultShiftPreset) ? 'selected' : ''}>Custom (Set below)</option>
+                                        <option value="open" ${app.defaultShiftPreset === 'open' ? 'selected' : ''}>Open Branch (7:45 AM - 4:15 PM)</option>
+                                        <option value="close" ${app.defaultShiftPreset === 'close' ? 'selected' : ''}>Close Branch (8:30 AM - 5:15 PM)</option>
+                                        <option value="standard" ${app.defaultShiftPreset === 'standard' ? 'selected' : ''}>Standard Shift (8:30 AM - 5:00 PM)</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="default-shift-in" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Default Shift In</label>
+                                        <input type="time" id="default-shift-in" value="${app.defaultShiftIn || '08:30'}" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800">
+                                    </div>
+                                    <div>
+                                        <label for="default-shift-out" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Default Shift Out</label>
+                                        <input type="time" id="default-shift-out" value="${app.defaultShiftOut || '17:00'}" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="default-break" class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Default Meal / Break Duration</label>
+                                    <select id="default-break" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 bg-white">
+                                        <option value="0" ${(app.defaultBreakMins === 0) ? 'selected' : ''}>No break (00:00)</option>
+                                        <option value="15" ${(app.defaultBreakMins === 15) ? 'selected' : ''}>15 mins (00:15)</option>
+                                        <option value="30" ${(app.defaultBreakMins === 30) ? 'selected' : ''}>30 mins (00:30)</option>
+                                        <option value="45" ${(app.defaultBreakMins === 45 || app.defaultBreakMins === undefined) ? 'selected' : ''}>45 mins (00:45)</option>
+                                        <option value="60" ${(app.defaultBreakMins === 60) ? 'selected' : ''}>60 mins (01:00)</option>
+                                        <option value="90" ${(app.defaultBreakMins === 90) ? 'selected' : ''}>90 mins (01:30)</option>
+                                        <option value="120" ${(app.defaultBreakMins === 120) ? 'selected' : ''}>2 hours (02:00)</option>
+                                    </select>
+                                </div>
+                                <button id="save-default-settings-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-bold shadow-md transition">Save Default Settings</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
         
         document.getElementById('add-employee-form').addEventListener('submit', (e) => {
             e.preventDefault(); 
@@ -1004,6 +1141,51 @@
             });
         });
         document.getElementById('add-leave-type-btn').addEventListener('click', () => { app.leaveTypes.push({ id: `lt${Date.now()}`, name: 'New Absence Type', durationHHMM: '08:00', color: '#888888' }); saveState(); renderSetup(); });
+
+        const defaultPresetSelect = document.getElementById('default-preset');
+        if (defaultPresetSelect) {
+            defaultPresetSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                const shiftInEl = document.getElementById('default-shift-in');
+                const shiftOutEl = document.getElementById('default-shift-out');
+                if (val === 'open') {
+                    shiftInEl.value = '07:45';
+                    shiftOutEl.value = '16:15';
+                } else if (val === 'close') {
+                    shiftInEl.value = '08:30';
+                    shiftOutEl.value = '17:15';
+                } else if (val === 'standard') {
+                    shiftInEl.value = '08:30';
+                    shiftOutEl.value = '17:00';
+                }
+            });
+        }
+
+        const shiftInInput = document.getElementById('default-shift-in');
+        if (shiftInInput) {
+            shiftInInput.addEventListener('change', () => {
+                if (defaultPresetSelect) defaultPresetSelect.value = 'custom';
+            });
+        }
+
+        const shiftOutInput = document.getElementById('default-shift-out');
+        if (shiftOutInput) {
+            shiftOutInput.addEventListener('change', () => {
+                if (defaultPresetSelect) defaultPresetSelect.value = 'custom';
+            });
+        }
+
+        const saveDefaultBtn = document.getElementById('save-default-settings-btn');
+        if (saveDefaultBtn) {
+            saveDefaultBtn.addEventListener('click', () => {
+                app.defaultShiftIn = document.getElementById('default-shift-in').value;
+                app.defaultShiftOut = document.getElementById('default-shift-out').value;
+                app.defaultBreakMins = parseInt(document.getElementById('default-break').value, 10);
+                app.defaultShiftPreset = document.getElementById('default-preset') ? document.getElementById('default-preset').value : 'custom';
+                saveState();
+                showToast('Success', 'Default shift settings saved!', 'success');
+            });
+        }
     }
 
     // --- TEAM SCHEDULE VIEW & HELPERS ---
@@ -1020,11 +1202,37 @@
         return netMins > 0 ? parseFloat((netMins / 60).toFixed(2)) : 0;
     }
 
+    function getLeaveTypeDefaultHours(type) {
+        if (!type) return 8.0;
+        const typeUpper = type.toUpperCase();
+        
+        // Find matching leaveType from app.leaveTypes
+        const match = app.leaveTypes.find(lt => {
+            const idUpper = lt.id.toUpperCase();
+            const nameUpper = lt.name.toUpperCase();
+            return idUpper === typeUpper || 
+                   nameUpper === typeUpper || 
+                   (typeUpper === 'SICK TIME' && (idUpper === 'SICK' || nameUpper.includes('SICK'))) ||
+                   (typeUpper === 'PERSONAL DAY' && (idUpper === 'PERSONAL' || nameUpper.includes('PERSONAL'))) ||
+                   (typeUpper === 'HOLIDAY' && (idUpper === 'HOLIDAY' || nameUpper.includes('HOLIDAY')));
+        });
+        
+        if (match && match.durationHHMM) {
+            const parts = match.durationHHMM.split(':');
+            const hh = parseInt(parts[0], 10);
+            const mm = parseInt(parts[1], 10);
+            if (!isNaN(hh) && !isNaN(mm)) {
+                return hh + (mm / 60);
+            }
+        }
+        return 8.0; // Default to 8 hours if not found
+    }
+
     function getShiftHours(dayData) {
         if (!dayData || !dayData.active) return 0;
         const typeUpper = (dayData.type || 'Regular').toUpperCase();
-        if (typeUpper !== 'REGULAR' && typeUpper !== 'OFF') {
-            return 8.0; // Paid absence defaults to 8 hours
+        if (typeUpper !== 'REGULAR' && typeUpper !== 'OFF' && typeUpper !== 'OPEN BRANCH' && typeUpper !== 'CLOSE BRANCH') {
+            return getLeaveTypeDefaultHours(dayData.type);
         }
         return calculateHours(dayData.shiftIn, dayData.shiftOut, dayData.breakMins);
     }
@@ -1144,13 +1352,13 @@
                 empSched = {
                     employeeId: emp.id,
                     days: {
-                        "Mon": { active: true, type: 'Regular', location: 'Boca', shiftIn: "09:00", shiftOut: "17:00", breakMins: 60, role: emp.role || 'FSA' },
-                        "Tue": { active: true, type: 'Regular', location: 'Boca', shiftIn: "09:00", shiftOut: "17:00", breakMins: 60, role: emp.role || 'FSA' },
-                        "Wed": { active: true, type: 'Regular', location: 'Boca', shiftIn: "09:00", shiftOut: "17:00", breakMins: 60, role: emp.role || 'FSA' },
-                        "Thu": { active: true, type: 'Regular', location: 'Boca', shiftIn: "09:00", shiftOut: "17:00", breakMins: 60, role: emp.role || 'FSA' },
-                        "Fri": { active: true, type: 'Regular', location: 'Boca', shiftIn: "09:00", shiftOut: "17:00", breakMins: 60, role: emp.role || 'FSA' },
-                        "Sat": { active: false, type: 'OFF', role: emp.role || 'FSA' },
-                        "Sun": { active: false, type: 'OFF', role: emp.role || 'FSA' }
+                        "Mon": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
+                        "Tue": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
+                        "Wed": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
+                        "Thu": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
+                        "Fri": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
+                        "Sat": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' },
+                        "Sun": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || 'FSA' }
                     }
                 };
                 app.schedules[weekDate].push(empSched);
@@ -1225,11 +1433,16 @@
                          </div>
                          
                          <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
+                          <div class="flex items-center space-x-2">
+                              <input type="checkbox" id="toggle-coverage-totals" ${app.showCoverageTotals ? 'checked' : ''} class="w-4 h-4 text-yellow-500 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer" />
+                              <label for="toggle-coverage-totals" class="text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer select-none">Show Review Rows</label>
+                          </div>
+                          <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
                          
                          <button id="copy-prev-week-btn" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 py-1.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition">
                              Copy Last Week
                          </button>
-                         <button id="fill-defaults-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 py-1.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition" title="Sets Mon-Fri to Boca 9 AM - 5 PM for all working employees">
+                         <button id="fill-defaults-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 py-1.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition" title="Pre-populates Monday-Friday with configured default shift hours">
                              Fill Defaults
                          </button>
                          <button id="clear-week-btn" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 py-1.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition">
@@ -1272,6 +1485,15 @@
             }
         };
         
+        const toggleCoverageBtn = document.getElementById('toggle-coverage-totals');
+        if (toggleCoverageBtn) {
+            toggleCoverageBtn.onchange = (e) => {
+                app.showCoverageTotals = e.target.checked;
+                saveState();
+                renderSchedule();
+            };
+        }
+        
         document.getElementById('copy-prev-week-btn').onclick = () => {
             const current = new Date(app.scheduleWeekDate + 'T12:00:00');
             current.setDate(current.getDate() - 7);
@@ -1289,14 +1511,20 @@
         };
         
         document.getElementById('fill-defaults-btn').onclick = () => {
-            if (confirm('Are you sure you want to pre-populate Mon-Fri shifts to 9:00 AM - 5:00 PM with a 60 min break for all employees? (This overrides unsaved changes)')) {
+            const defaultIn = app.defaultShiftIn || '08:30';
+            const defaultOut = app.defaultShiftOut || '17:00';
+            const defaultBreak = app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45;
+            const defaultInFormatted = format12HourTime(defaultIn);
+            const defaultOutFormatted = format12HourTime(defaultOut);
+            
+            if (confirm(`Are you sure you want to pre-populate Mon-Fri shifts to ${defaultInFormatted} - ${defaultOutFormatted} with a ${defaultBreak} min break for all employees? (This overrides unsaved changes)`)) {
                 const sList = getWeeklySchedule(app.scheduleWeekDate);
                 sList.forEach(sched => {
                     ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(day => {
-                        sched.days[day] = { active: true, shiftIn: '09:00', shiftOut: '17:00', breakMins: 60 };
+                        sched.days[day] = { active: true, type: 'Regular', location: '', shiftIn: defaultIn, shiftOut: defaultOut, breakMins: defaultBreak };
                     });
                     ['Sat', 'Sun'].forEach(day => {
-                        sched.days[day] = { active: false, shiftIn: '', shiftOut: '', breakMins: 0 };
+                        sched.days[day] = { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0 };
                     });
                 });
                 saveState();
@@ -1382,7 +1610,7 @@
             
             let empTotalHrs = 0;
             const dayCellsHtml = days.map(day => {
-                const dayData = empSched.days[day] || { active: false, type: 'OFF', location: 'Boca', shiftIn: '09:00', shiftOut: '17:00', breakMins: 60 };
+                const dayData = empSched.days[day] || { active: false, type: 'OFF', location: '', shiftIn: app.defaultShiftIn || '08:30', shiftOut: app.defaultShiftOut || '17:00', breakMins: app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45 };
                 const dayHrs = getShiftHours(dayData);
                 empTotalHrs += dayHrs;
                 
@@ -1390,7 +1618,7 @@
                 let cellContent = '';
                 
                 const typeUpper = (dayData.type || '').toUpperCase();
-                const isSpecialDay = !dayData.active || (typeUpper !== 'REGULAR' && typeUpper !== 'OFF');
+                const isSpecialDay = !dayData.active || (typeUpper !== 'REGULAR' && typeUpper !== 'OFF' && typeUpper !== 'OPEN BRANCH' && typeUpper !== 'CLOSE BRANCH');
                 
                 if (isSpecialDay) {
                     const label = !dayData.active ? 'OFF' : typeUpper;
@@ -1422,7 +1650,7 @@
                 } else {
                     // Regular Shift
                     const breakStr = formatBreakTime(dayData.breakMins);
-                    const locationStr = dayData.location || 'Boca';
+                    const locationStr = dayData.location !== undefined ? dayData.location : '';
                     const empTextClass = getEmployeeTextClass(emp.cardColor);
                     
                     const isSpecialAssignment = locationStr.toLowerCase() === 'special assignment';
@@ -1438,15 +1666,15 @@
                                  ${locationHtml}
                              </div>
                              <!-- Middle Row: Shift Times (12h format) and Break -->
-                             <div class="grid grid-cols-3 items-center text-[11px] font-black text-[#434343] py-2">
+                             <div class="grid grid-cols-3 items-center text-[11px] font-semibold text-[#434343] py-2">
                                  <div class="text-left">${format12HourTime(dayData.shiftIn)}</div>
                                  <div class="text-center">${format12HourTime(dayData.shiftOut)}</div>
-                                 <div class="text-right text-gray-500 font-bold">${breakStr}</div>
+                                 <div class="text-right text-gray-500 font-normal">${breakStr}</div>
                              </div>
                              <!-- Bottom Row: Role & Daily total hours -->
                              <div class="flex justify-between items-center text-[10px] pt-1 border-t border-gray-100/50">
-                                 <span class="${empTextClass} font-black uppercase tracking-tight">${dayData.role || emp.role || ''}</span>
-                                 <span class="${empTextClass} font-black">${formatHoursToHHMMString(dayHrs)}</span>
+                                 <span class="${empTextClass} font-semibold uppercase tracking-tight">${dayData.role || emp.role || ''}</span>
+                                 <span class="${empTextClass} font-normal">${formatHoursToHHMMString(dayHrs)}</span>
                              </div>
                         </div>
                     `;
@@ -1474,8 +1702,8 @@
                                        <button class="row-clear-btn text-[9px] text-red-600 hover:underline font-extrabold uppercase">Clear</button>
                                    </div>
                                </div>
-                               <div class="text-[11px] font-black text-gray-500/80 uppercase tracking-tight">${emp.role || ''}</div>
-                               <div class="text-right text-[11px] font-black text-gray-500/90 mt-1">${weeklyTotalFormatted}</div>
+                               <div class="text-[11px] font-normal text-gray-500/80 uppercase tracking-tight">${emp.role || ''}</div>
+                               <div class="text-right text-[11px] font-normal text-gray-500/90 mt-1">${weeklyTotalFormatted}</div>
                           </div>
                       </td>
                       ${dayCellsHtml}
@@ -1507,7 +1735,7 @@
                          <tbody class="divide-y divide-gray-200">
                              ${rowsHtml}
                          </tbody>
-                         <tfoot>
+                         <tfoot class="${app.showCoverageTotals ? '' : 'hidden'}">
                              <tr class="bg-gray-50 divide-x divide-gray-100 font-semibold border-t-2 border-gray-300">
                                  <td class="px-4 py-3 sticky-col bg-gray-50 border-r border-b border-gray-300 font-black text-gray-800 text-xs uppercase tracking-wider">
                                      Daily Net Coverage
@@ -1630,15 +1858,21 @@
                 const empId = row.dataset.empId;
                 const empSched = weekSchedules.find(s => s.employeeId === empId);
                 if (empSched) {
+                    const defaultIn = app.defaultShiftIn || '08:30';
+                    const defaultOut = app.defaultShiftOut || '17:00';
+                    const defaultBreak = app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45;
+                    const defaultInFormatted = format12HourTime(defaultIn);
+                    const defaultOutFormatted = format12HourTime(defaultOut);
+                    
                     ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(day => {
-                        empSched.days[day] = { active: true, type: 'Regular', location: 'Boca', shiftIn: '09:00', shiftOut: '17:00', breakMins: 60 };
+                        empSched.days[day] = { active: true, type: 'Regular', location: '', shiftIn: defaultIn, shiftOut: defaultOut, breakMins: defaultBreak };
                     });
                     ['Sat', 'Sun'].forEach(day => {
                         empSched.days[day] = { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0 };
                     });
                     saveState();
                     renderSchedule();
-                    showToast('Row Filled', 'Monday-Friday shifts filled with standard Boca 9am-5pm hours.', 'success');
+                    showToast('Row Filled', `Monday-Friday shifts filled with standard ${defaultInFormatted}-${defaultOutFormatted} hours.`, 'success');
                 }
                 return;
             }
@@ -1663,7 +1897,7 @@
 
     function updateCellAndRowTotals(cell, empSched, day, weekSchedules, days) {
         const dayData = empSched.days[day];
-        const dayHrs = dayData.active ? calculateHours(dayData.shiftIn, dayData.shiftOut, dayData.breakMins) : 0;
+        const dayHrs = getShiftHours(dayData);
         
         const hrsBadge = cell.querySelector('.bg-blue-100');
         if (hrsBadge) {
@@ -1674,7 +1908,7 @@
         days.forEach(d => {
             const dData = empSched.days[d];
             if (dData && dData.active) {
-                empTotalHrs += calculateHours(dData.shiftIn, dData.shiftOut, dData.breakMins);
+                empTotalHrs += getShiftHours(dData);
             }
         });
         
@@ -1690,7 +1924,7 @@
             weekSchedules.forEach(sched => {
                 const dData = sched.days[d];
                 if (dData && dData.active) {
-                    totalHrs += calculateHours(dData.shiftIn, dData.shiftOut, dData.breakMins);
+                    totalHrs += getShiftHours(dData);
                     countActive++;
                 }
             });
@@ -1736,8 +1970,13 @@
             days.forEach(day => {
                 if (empSched && empSched.days[day] && empSched.days[day].active) {
                     const dayData = empSched.days[day];
-                    const hours = calculateHours(dayData.shiftIn, dayData.shiftOut, dayData.breakMins);
-                    rowData.push(`${dayData.shiftIn} - ${dayData.shiftOut} (Meal: ${dayData.breakMins}m) [${hours} hrs]`);
+                    const hours = getShiftHours(dayData);
+                    const typeUpper = (dayData.type || 'Regular').toUpperCase();
+                    if (typeUpper !== 'REGULAR' && typeUpper !== 'OPEN BRANCH' && typeUpper !== 'CLOSE BRANCH') {
+                        rowData.push(`${dayData.type} [${hours} hrs]`);
+                    } else {
+                        rowData.push(`${dayData.shiftIn} - ${dayData.shiftOut} (Meal: ${dayData.breakMins}m) [${hours} hrs]`);
+                    }
                     rowTotal += hours;
                 } else {
                     rowData.push('OFF');
@@ -1760,7 +1999,7 @@
         const empSched = weekSchedules.find(s => s.employeeId === employeeId);
         if (!empSched) return;
         
-        const dayData = empSched.days[day] || { active: false, type: 'OFF', location: 'Boca', shiftIn: '09:00', shiftOut: '17:00', breakMins: 60 };
+        const dayData = empSched.days[day] || { active: false, type: 'OFF', location: '', shiftIn: app.defaultShiftIn || '08:30', shiftOut: app.defaultShiftOut || '17:00', breakMins: app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45 };
         
         document.getElementById('sched-emp-id').value = employeeId;
         document.getElementById('sched-day-code').value = day;
@@ -1773,8 +2012,8 @@
         
         const schedLocationPresets = document.getElementById('sched-location-presets');
         const schedLocationCustom = document.getElementById('sched-location-custom');
-        const locationVal = dayData.location || 'Boca';
-        const isPreset = ['Boca', 'Call Night', 'Special Assignment', 'Charleston Square', 'Wellington'].includes(locationVal);
+        const locationVal = dayData.location !== undefined ? dayData.location : '';
+        const isPreset = ['', 'Boca', 'Teller', 'Platform', 'Call Night', 'Special Assignment', 'Charleston Square', 'Wellington'].includes(locationVal);
         
         if (isPreset) {
             schedLocationPresets.value = locationVal;
@@ -1786,9 +2025,12 @@
             schedLocationCustom.style.display = 'block';
         }
         
-        document.getElementById('sched-in').value = dayData.shiftIn || '09:00';
-        document.getElementById('sched-out').value = dayData.shiftOut || '17:00';
-        document.getElementById('sched-break').value = String(dayData.breakMins !== undefined ? dayData.breakMins : 60);
+        const typeVal = dayData.active ? (dayData.type || 'Regular') : 'OFF';
+        const isInitialAbsence = ['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(typeVal);
+        
+        document.getElementById('sched-in').value = isInitialAbsence ? '' : (dayData.shiftIn || '09:00');
+        document.getElementById('sched-out').value = isInitialAbsence ? '' : (dayData.shiftOut || '17:00');
+        document.getElementById('sched-break').value = String(isInitialAbsence ? 0 : (dayData.breakMins !== undefined ? dayData.breakMins : 60));
         document.getElementById('sched-role').value = dayData.role || emp.role || '';
         
         // Handle field visibility
@@ -1799,11 +2041,48 @@
             regularFields.style.display = 'block';
         }
         
+        const schedPresetTimes = document.getElementById('sched-preset-times');
+        
         schedTypeSelect.onchange = () => {
             if (schedTypeSelect.value === 'OFF') {
                 regularFields.style.display = 'none';
             } else {
                 regularFields.style.display = 'block';
+            }
+            
+            const isAbsence = ['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(schedTypeSelect.value);
+            if (isAbsence) {
+                document.getElementById('sched-in').value = '';
+                document.getElementById('sched-out').value = '';
+                document.getElementById('sched-break').value = '0';
+                if (schedPresetTimes) schedPresetTimes.value = '';
+            } else if (schedTypeSelect.value === 'Open Branch') {
+                document.getElementById('sched-in').value = '07:45';
+                document.getElementById('sched-out').value = '16:15';
+                document.getElementById('sched-break').value = String(app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45);
+                if (schedPresetTimes) schedPresetTimes.value = 'open';
+            } else if (schedTypeSelect.value === 'Close Branch') {
+                document.getElementById('sched-in').value = '08:30';
+                document.getElementById('sched-out').value = '17:15';
+                document.getElementById('sched-break').value = String(app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45);
+                if (schedPresetTimes) schedPresetTimes.value = 'close';
+            } else if (schedTypeSelect.value === 'Regular') {
+                document.getElementById('sched-in').value = app.defaultShiftIn || '08:30';
+                document.getElementById('sched-out').value = app.defaultShiftOut || '17:00';
+                document.getElementById('sched-break').value = String(app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45);
+                if (schedPresetTimes) {
+                    const defaultIn = app.defaultShiftIn || '08:30';
+                    const defaultOut = app.defaultShiftOut || '17:00';
+                    if (defaultIn === '07:45' && defaultOut === '16:15') {
+                        schedPresetTimes.value = 'open';
+                    } else if (defaultIn === '08:30' && defaultOut === '17:15') {
+                        schedPresetTimes.value = 'close';
+                    } else if (defaultIn === '08:30' && defaultOut === '17:00') {
+                        schedPresetTimes.value = 'standard';
+                    } else {
+                        schedPresetTimes.value = '';
+                    }
+                }
             }
         };
         
@@ -1814,6 +2093,57 @@
                 schedLocationCustom.style.display = 'none';
             }
         };
+        
+        if (schedPresetTimes) {
+            const currentIn = dayData.shiftIn || '';
+            const currentOut = dayData.shiftOut || '';
+            if (currentIn === '07:45' && currentOut === '16:15') {
+                schedPresetTimes.value = 'open';
+            } else if (currentIn === '08:30' && currentOut === '17:15') {
+                schedPresetTimes.value = 'close';
+            } else if (currentIn === '08:30' && currentOut === '17:00') {
+                schedPresetTimes.value = 'standard';
+            } else {
+                schedPresetTimes.value = '';
+            }
+            
+            schedPresetTimes.onchange = () => {
+                const val = schedPresetTimes.value;
+                const shiftInEl = document.getElementById('sched-in');
+                const shiftOutEl = document.getElementById('sched-out');
+                const breakEl = document.getElementById('sched-break');
+                if (val === 'open') {
+                    shiftInEl.value = '07:45';
+                    shiftOutEl.value = '16:15';
+                    breakEl.value = String(app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45);
+                    schedTypeSelect.value = 'Open Branch';
+                } else if (val === 'close') {
+                    shiftInEl.value = '08:30';
+                    shiftOutEl.value = '17:15';
+                    breakEl.value = String(app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45);
+                    schedTypeSelect.value = 'Close Branch';
+                } else if (val === 'standard') {
+                    shiftInEl.value = '08:30';
+                    shiftOutEl.value = '17:00';
+                    breakEl.value = String(app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45);
+                    schedTypeSelect.value = 'Regular';
+                }
+            };
+        }
+
+        const shiftInEl = document.getElementById('sched-in');
+        if (shiftInEl) {
+            shiftInEl.addEventListener('change', () => {
+                if (schedPresetTimes) schedPresetTimes.value = '';
+            });
+        }
+
+        const shiftOutEl = document.getElementById('sched-out');
+        if (shiftOutEl) {
+            shiftOutEl.addEventListener('change', () => {
+                if (schedPresetTimes) schedPresetTimes.value = '';
+            });
+        }
         
         // Setup Close Event Handlers
         const closeBtn = document.getElementById('sched-modal-close-btn');
@@ -1837,7 +2167,7 @@
             
             if (activeWorking) {
                 const finalLocation = schedLocationPresets.value === 'Custom' ? schedLocationCustom.value : schedLocationPresets.value;
-                dayData.location = finalLocation || 'Boca';
+                dayData.location = finalLocation || '';
                 dayData.shiftIn = document.getElementById('sched-in').value;
                 dayData.shiftOut = document.getElementById('sched-out').value;
                 dayData.breakMins = parseInt(document.getElementById('sched-break').value, 10) || 0;
@@ -1972,9 +2302,46 @@
         XLSX.writeFile(wb, `Team_Leave_Tracker_${year}.xlsx`);
     }
 
+    function toggleSidebar(collapsed) {
+        app.sidebarCollapsed = collapsed;
+        saveState();
+        
+        const sidebar = document.getElementById('sidebar');
+        const expandBtn = document.getElementById('sidebar-expand-btn');
+        const mainViewport = document.getElementById('main-content-viewport');
+        
+        if (sidebar && expandBtn) {
+            if (app.sidebarCollapsed) {
+                sidebar.classList.add('w-0', 'p-0', 'border-r-0');
+                sidebar.classList.remove('w-64', 'p-4', 'border-r');
+                expandBtn.classList.remove('hidden');
+                if (mainViewport) {
+                    mainViewport.classList.add('pl-16');
+                }
+            } else {
+                sidebar.classList.add('w-64', 'p-4', 'border-r');
+                sidebar.classList.remove('w-0', 'p-0', 'border-r-0');
+                expandBtn.classList.add('hidden');
+                if (mainViewport) {
+                    mainViewport.classList.remove('pl-16');
+                }
+            }
+        }
+    }
+
     // --- INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', () => {
         loadState();
+        
+        // Hide sidebar by default on load
+        app.sidebarCollapsed = true;
+        toggleSidebar(true);
+
+        const expandBtn = document.getElementById('sidebar-expand-btn');
+        const collapseBtn = document.getElementById('sidebar-collapse-btn');
+        if (expandBtn) expandBtn.addEventListener('click', () => toggleSidebar(false));
+        if (collapseBtn) collapseBtn.addEventListener('click', () => toggleSidebar(true));
+
         navItems.forEach(item => item.addEventListener('click', () => { app.activeTab = item.dataset.tab; saveState(); render(); }));
         document.getElementById('modal-close-btn').addEventListener('click', closeEditModal);
         modal.addEventListener('click', (e) => { if (e.target === modal) closeEditModal(); });
