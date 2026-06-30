@@ -1963,19 +1963,26 @@
             const weeklyTotalFormatted = formatHoursToHHMMString(empTotalHrs);
             
             return `
-                <tr class="hover:bg-gray-50/30 bg-white" data-emp-id="${emp.id}">
-                     <td class="p-2.5 border-r border-b border-gray-300 sticky-col group ${empBgClass} transition-all" style="height: 1px;">
+                <tr class="hover:bg-gray-50/30 bg-white group" data-emp-id="${emp.id}">
+                     <td class="p-2 border-r border-b border-gray-300 sticky-col ${empBgClass} transition-all" style="height: 1px;">
                           <div class="flex flex-col h-full justify-between min-h-[75px]">
-                               <div class="flex justify-between items-start">
-                                   <span class="font-black text-sm text-[#434343]">${emp.name}</span>
+                               <div class="flex justify-between items-start gap-1">
+                                   <input type="text" class="employee-inline-name font-black text-sm text-[#434343] bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white px-1 py-0.5 rounded outline-none w-3/4 transition-all" value="${emp.name}" data-emp-id="${emp.id}" placeholder="Name" />
                                    <!-- Inline Hover controls for Quick Fill/Clear -->
-                                   <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                       <button class="row-default-btn text-[9px] text-blue-600 hover:underline font-extrabold uppercase">Fill</button>
-                                       <button class="row-clear-btn text-[9px] text-red-600 hover:underline font-extrabold uppercase">Clear</button>
+                                   <div class="flex items-center space-x-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                       <button class="row-default-btn text-[9px] text-blue-600 hover:underline font-extrabold uppercase" title="Fill Defaults">Fill</button>
+                                       <button class="row-clear-btn text-[9px] text-red-600 hover:underline font-extrabold uppercase" title="Clear Shifts">Clear</button>
                                    </div>
                                </div>
-                               <div class="text-[11px] font-normal text-gray-500/80 uppercase tracking-tight">${emp.role || ''}</div>
-                               <div class="text-right text-[11px] font-normal text-gray-500/90 mt-1">${weeklyTotalFormatted}</div>
+                               <div class="mt-1">
+                                   <input type="text" class="employee-inline-role text-[11px] font-normal text-gray-500 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white px-1 py-0.5 rounded outline-none w-full transition-all uppercase tracking-tight" value="${emp.role || ''}" data-emp-id="${emp.id}" placeholder="Role/Title" />
+                               </div>
+                               <div class="flex justify-between items-center mt-1">
+                                   <button class="row-delete-inline-btn text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-all opacity-0 group-hover:opacity-100 cursor-pointer" data-emp-id="${emp.id}" title="Delete Row">
+                                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                   </button>
+                                   <div class="text-right text-[11px] font-normal text-gray-400 mr-1">${weeklyTotalFormatted}</div>
+                               </div>
                           </div>
                       </td>
                       ${dayCellsHtml}
@@ -2006,6 +2013,16 @@
                          </thead>
                          <tbody class="divide-y divide-gray-200">
                              ${rowsHtml}
+                             <!-- Add Employee Row Inline Button -->
+                             <tr class="bg-gray-100 hover:bg-gray-100/90 transition-all">
+                                 <td class="p-2 sticky-col bg-gray-100">
+                                     <button id="add-employee-inline-btn" class="flex items-center space-x-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-blue-600 bg-transparent hover:bg-blue-50/50 border border-dashed border-gray-300 hover:border-blue-300/80 rounded-md transition-all cursor-pointer opacity-60 hover:opacity-100">
+                                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                                         <span>Add Row</span>
+                                     </button>
+                                 </td>
+                                 <td colspan="${days.length}" class="bg-gray-100"></td>
+                             </tr>
                          </tbody>
                          <tfoot class="${app.showCoverageTotals ? '' : 'hidden'}">
                              <tr class="bg-gray-50 divide-x divide-gray-100 font-semibold border-t-2 border-gray-300">
@@ -2334,6 +2351,52 @@
                 return;
             }
             
+            const rowDeleteInlineBtn = target.closest('.row-delete-inline-btn');
+            if (rowDeleteInlineBtn) {
+                const empId = rowDeleteInlineBtn.dataset.empId;
+                const emp = app.employees.find(x => x.id === empId);
+                const empName = emp ? emp.name : 'this employee';
+                showConfirm(
+                    "Delete Row",
+                    `Are you sure you want to delete ${empName}? All their schedule data and log entries will also be permanently removed.`,
+                    () => {
+                        app.employees = app.employees.filter(x => x.id !== empId);
+                        app.logEntries = app.logEntries.filter(log => log.employeeId !== empId);
+                        for (const weekDate in app.schedules) {
+                            app.schedules[weekDate] = app.schedules[weekDate].filter(s => s.employeeId !== empId);
+                        }
+                        saveState();
+                        renderSchedule();
+                        showToast("Deleted", `${empName} has been deleted.`, "info");
+                    }
+                );
+                return;
+            }
+            
+            const addEmployeeBtn = target.closest('#add-employee-inline-btn');
+            if (addEmployeeBtn) {
+                const newEmpId = `emp${Date.now()}`;
+                const newEmp = {
+                    id: newEmpId,
+                    name: 'New Employee',
+                    role: 'FSA',
+                    cardColor: 'white',
+                    vacationAllotment: 15
+                };
+                app.employees.push(newEmp);
+                saveState();
+                renderSchedule();
+                
+                setTimeout(() => {
+                    const newInput = container.querySelector(`.employee-inline-name[data-emp-id="${newEmpId}"]`);
+                    if (newInput) {
+                        newInput.focus();
+                        newInput.select();
+                    }
+                }, 50);
+                return;
+            }
+            
             const rowDefaultBtn = target.closest('.row-default-btn');
             if (rowDefaultBtn) {
                 const row = target.closest('tr');
@@ -2374,6 +2437,46 @@
                 }
                 return;
             }
+        });
+
+        // Listen to inline employee name input changes
+        container.querySelectorAll('.employee-inline-name').forEach(input => {
+            input.addEventListener('input', e => {
+                const empId = e.target.dataset.empId;
+                const emp = app.employees.find(x => x.id === empId);
+                if (emp) {
+                    emp.name = e.target.value;
+                    saveState();
+                }
+            });
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.target.blur();
+                }
+            });
+            input.addEventListener('focusout', () => {
+                renderSchedule();
+            });
+        });
+        
+        // Listen to inline employee role input changes
+        container.querySelectorAll('.employee-inline-role').forEach(input => {
+            input.addEventListener('input', e => {
+                const empId = e.target.dataset.empId;
+                const emp = app.employees.find(x => x.id === empId);
+                if (emp) {
+                    emp.role = e.target.value;
+                    saveState();
+                }
+            });
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.target.blur();
+                }
+            });
+            input.addEventListener('focusout', () => {
+                renderSchedule();
+            });
         });
     }
 
