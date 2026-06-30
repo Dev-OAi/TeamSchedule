@@ -264,7 +264,8 @@
         defaultShiftIn: '08:30',
         defaultShiftOut: '17:00',
         defaultBreakMins: 45,
-        defaultShiftPreset: 'standard'
+        defaultShiftPreset: 'standard',
+        offRowColor: '#ffffff'
     };
 
     // --- DOM ELEMENTS ---
@@ -311,7 +312,7 @@
                     layoutOrientation: 'horizontal',
                     openBranchColor: '#d9ead3',
                     closeBranchColor: '#f4cccc',
-                    offRowColor: '#000000',
+                    offRowColor: '#ffffff',
                     showCoverageTotals: false,
                     defaultShiftIn: '08:30',
                     defaultShiftOut: '17:00',
@@ -321,6 +322,10 @@
                 };
                 
                 app = defaultState;
+                
+                if (app.offRowColor === '#000000') {
+                    app.offRowColor = '#ffffff';
+                }
                 
                 app.leaveTypes = app.leaveTypes.map((lt, index) => ({
                     color: app.leaveTypes[index]?.color || '#6b7280',
@@ -460,6 +465,16 @@
                 default: renderDashboard();
             }
             updateNav();
+            
+            // Bind quick tab navigation header buttons on any rendered page
+            document.querySelectorAll('[data-quick-tab]').forEach(btn => {
+                btn.onclick = () => {
+                    app.activeTab = btn.dataset.quickTab;
+                    saveState();
+                    render();
+                };
+            });
+
             mainContent.classList.remove('fade-out');
         }, 200);
     }
@@ -468,6 +483,50 @@
         navItems.forEach(item => {
             item.classList.toggle('active', item.dataset.tab === app.activeTab);
         });
+    }
+
+    function renderPageHeader(title, currentTab) {
+        const getButtonClass = (tab) => {
+            if (currentTab === tab) {
+                return "p-1 rounded bg-black/25 text-black border border-black/15 shadow-sm";
+            }
+            return "p-1 rounded text-black/80 hover:bg-black/10 hover:text-black transition duration-150";
+        };
+
+        return `
+            <div class="bg-[#f1c232] text-black font-extrabold uppercase p-3 rounded-t-xl border border-gray-300 flex flex-row justify-between items-center text-left gap-4 tracking-wider shadow-sm">
+                 <div class="flex items-center gap-2">
+                     <h1 class="text-lg md:text-xl font-black text-black tracking-tight uppercase inline-block select-none">${title}</h1>
+                 </div>
+                 
+                 <!-- Quick Navigation Header Buttons -->
+                 <div class="flex items-center space-x-1 bg-black/10 p-0.5 rounded-lg border border-black/5 shadow-inner shrink-0">
+                     <!-- Team Schedule Quick Button -->
+                     <button data-quick-tab="Schedule" class="${getButtonClass('Schedule')} relative group" title="Team Schedule" aria-label="Team Schedule">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          <span class="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] font-black text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition duration-150 pointer-events-none whitespace-nowrap z-50 shadow-md">Team Schedule</span>
+                     </button>
+                     <!-- Dashboard Quick Button -->
+                     <button data-quick-tab="Dashboard" class="${getButtonClass('Dashboard')} relative group" title="Dashboard" aria-label="Dashboard">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                          <span class="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] font-black text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition duration-150 pointer-events-none whitespace-nowrap z-50 shadow-md">Dashboard</span>
+                     </button>
+                     <!-- Data Log Quick Button -->
+                     <button data-quick-tab="Data Log" class="${getButtonClass('Data Log')} relative group" title="Data Log" aria-label="Data Log">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                          <span class="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] font-black text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition duration-150 pointer-events-none whitespace-nowrap z-50 shadow-md">Data Log</span>
+                     </button>
+                     
+                     <div class="h-3.5 w-[1px] bg-black/20 mx-0.5"></div>
+                     
+                     <!-- Setup Quick Button (Settings) -->
+                     <button data-quick-tab="Setup" class="${getButtonClass('Setup')} relative group" title="Setup Settings" aria-label="Setup Settings">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                          <span class="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] font-black text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition duration-150 pointer-events-none whitespace-nowrap z-50 shadow-md">Setup Settings</span>
+                     </button>
+                 </div>
+            </div>
+        `;
     }
     
     function renderEmptyState(title, message, buttonText, buttonAction) {
@@ -534,27 +593,28 @@
 
         const summaryHtml = `
             <div>
-              <div class="flex justify-between items-center mb-4">
-                <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
-                <div class="flex items-center space-x-4">
+              ${renderPageHeader('Dashboard', 'Dashboard')}
+              
+              <!-- White Control Bar Below Yellow Header -->
+              <div class="bg-white p-4 border-b border-x border-gray-300 rounded-b-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md w-full">
                   <div class="flex items-center space-x-2">
-                    <label for="year-select" class="font-medium text-gray-700">Year:</label>
-                    <input id="year-select" type="number" value="${app.currentYear}" class="w-24 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+                      <label for="year-select" class="text-xs font-black text-gray-500 uppercase tracking-wider">Year:</label>
+                      <input id="year-select" type="number" value="${app.currentYear}" class="p-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none w-24 shadow-inner" />
                   </div>
-                  <div class="flex items-center space-x-2">
-                    <button id="save-btn" class="flex items-center bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-semibold shadow-md transition-colors">
-                      ${saveIcon}<span class="ml-2">Save Data</span>
-                    </button>
-                    <input type="file" id="load-data-input" class="hidden" accept=".json">
-                    <label for="load-data-input" class="cursor-pointer flex items-center bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 font-semibold shadow-md transition-colors">
-                      ${loadIcon}<span class="ml-2">Load Data</span>
-                    </label>
-                    <button id="download-btn" class="flex items-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 font-semibold shadow-md transition-colors">
-                      ${downloadIcon}<span class="ml-2">Download (.xlsx)</span>
-                    </button>
+                  <div class="flex flex-wrap items-center gap-3">
+                      <button id="save-btn" class="flex items-center bg-blue-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-blue-700 font-semibold shadow-md text-xs transition-colors">
+                        ${saveIcon}<span class="ml-1.5">Save Data</span>
+                      </button>
+                      <input type="file" id="load-data-input" class="hidden" accept=".json">
+                      <label for="load-data-input" class="cursor-pointer flex items-center bg-gray-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-gray-700 font-semibold shadow-md text-xs transition-colors">
+                        ${loadIcon}<span class="ml-1.5">Load Data</span>
+                      </label>
+                      <button id="download-btn" class="flex items-center bg-green-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-green-700 font-semibold shadow-md text-xs transition-colors">
+                        ${downloadIcon}<span class="ml-1.5">Download (.xlsx)</span>
+                      </button>
                   </div>
-                </div>
               </div>
+              
               <div class="bg-white shadow-lg rounded-xl overflow-hidden mt-8">
                 <h2 class="text-2xl font-semibold text-gray-700 p-6">Team Leave Summary</h2>
                 <div class="overflow-x-auto">
@@ -711,8 +771,9 @@
     function renderDataLog() {
         if (app.logEntries.length === 0 && app.filters.employeeId === 'all' && app.filters.leaveTypeId === 'all') {
             mainContent.innerHTML = `<div>
-                <h1 class="text-3xl font-bold text-gray-800 mb-6">Data Log</h1>
-                <div class="text-center bg-white shadow-lg rounded-xl p-12">
+                ${renderPageHeader('Data Log', 'Data Log')}
+                <div class="h-6"></div>
+                <div class="text-center bg-white shadow-lg rounded-xl p-12 border border-gray-300">
                      <h2 class="text-2xl font-semibold text-gray-700 mb-2">No Log Entries Yet</h2>
                      <p class="text-gray-500">Add an absence entry using the form to get started.</p>
                 </div>
@@ -760,7 +821,8 @@
 
         mainContent.innerHTML = `
         <div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-6">Data Log</h1>
+            ${renderPageHeader('Data Log', 'Data Log')}
+            <div class="h-6"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-1">
                     <div id="add-log-container" class="bg-white p-6 shadow-lg rounded-xl">
@@ -950,7 +1012,8 @@
         
         mainContent.innerHTML = `
             <div>
-                <h1 class="text-3xl font-bold text-gray-800 mb-6">Setup</h1>
+                ${renderPageHeader('Setup Settings', 'Setup')}
+                <div class="h-6"></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Employee List Card -->
                     <div class="bg-white p-6 shadow-lg rounded-xl">
@@ -1063,8 +1126,8 @@
                                     <div>
                                         <label for="off-row-color" class="block text-[10px] font-black text-gray-400 uppercase tracking-wider">Inactive / OFF Day Row Color</label>
                                         <div class="mt-1 flex items-center space-x-2">
-                                            <input type="color" id="off-row-color" value="${app.offRowColor || '#000000'}" class="w-8 h-8 p-0 border border-gray-300 rounded-md cursor-pointer bg-white">
-                                            <span id="off-color-hex" class="text-xs font-bold font-mono text-gray-500">${app.offRowColor || '#000000'}</span>
+                                            <input type="color" id="off-row-color" value="${app.offRowColor || '#ffffff'}" class="w-8 h-8 p-0 border border-gray-300 rounded-md cursor-pointer bg-white">
+                                            <span id="off-color-hex" class="text-xs font-bold font-mono text-gray-500">${app.offRowColor || '#ffffff'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1545,7 +1608,7 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                      <div>
                          
-                         <p class="text-sm text-gray-500 mt-1">Plan and manage team shifts, breaks, and track hours dynamically with Excel aesthetics.</p>
+                         
                      </div>
                      <div class="flex flex-wrap items-center gap-3">
                          ${viewToggleHtml}
@@ -1556,21 +1619,13 @@
                 </div>
                 
                 <!-- Week Selector Panel -->
-                <div class="bg-[#f1c232] text-black font-extrabold uppercase p-4 rounded-t-xl border border-gray-300 flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4 tracking-wider shadow-sm">
-                     <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                         <h1 class="text-2xl font-black text-black tracking-tight uppercase inline-block">Team Schedule</h1>
-                         
-                         
-                     </div>
-                     
-                                          <div class="text-xs font-black tracking-normal">ADJUST THIS WHEN UPDATING</div>
-                </div>
+                ${renderPageHeader('Team Schedule', 'Schedule')}
                 <!-- White Control Bar Below Yellow Header -->
                 <div class="bg-white p-4 border-b border-x border-gray-300 rounded-b-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md w-full">
                          <div class="flex flex-wrap items-center gap-3">
                              <div class="flex items-center space-x-2">
                                  <label for="week-picker" class="text-xs font-black text-gray-500 uppercase tracking-wider">Jump to Week:</label>
-                                 <input type="date" id="week-picker" value="${app.scheduleWeekDate}" class="p-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none" /></div><div class="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg border border-gray-200"><button id="prev-week-btn" class="px-2 py-0.5 hover:bg-gray-200 rounded-md transition text-black font-black text-xs" aria-label="Previous week">&lt;</button><button id="next-week-btn" class="px-2 py-0.5 hover:bg-gray-200 rounded-md transition text-black font-black text-xs" aria-label="Next week">&gt;</button></div><div class="hidden" style="display:none !important">
+                                 <input type="date" id="week-picker" value="${app.scheduleWeekDate}" class="p-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none" /></div><div class="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg border border-gray-200"><button id="today-week-btn" class="px-2 py-0.5 hover:bg-gray-200 rounded-md transition text-black font-black text-xs mr-0.5" aria-label="Today">Today</button><button id="prev-week-btn" class="px-2 py-0.5 hover:bg-gray-200 rounded-md transition text-black font-black text-xs" aria-label="Previous week">&lt;</button><button id="next-week-btn" class="px-2 py-0.5 hover:bg-gray-200 rounded-md transition text-black font-black text-xs" aria-label="Next week">&gt;</button></div><div class="hidden" style="display:none !important">
                              </div>
                              
                              <div class="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
@@ -1615,6 +1670,15 @@
         const toggleVerticalBtn = document.getElementById('toggle-vertical-view');
         if (toggleVerticalBtn) {
             toggleVerticalBtn.onclick = () => { app.layoutOrientation = 'vertical'; saveState(); renderSchedule(); };
+        }
+        
+        const todayWeekBtn = document.getElementById('today-week-btn');
+        if (todayWeekBtn) {
+            todayWeekBtn.onclick = () => {
+                app.scheduleWeekDate = getMondayDateString(new Date());
+                saveState();
+                renderSchedule();
+            };
         }
         
         document.getElementById('prev-week-btn').onclick = () => {
@@ -1716,6 +1780,14 @@
         document.getElementById('export-schedule-btn').onclick = () => {
             exportScheduleToSpreadsheet();
         };
+
+        document.querySelectorAll('[data-quick-tab]').forEach(btn => {
+            btn.onclick = () => {
+                app.activeTab = btn.dataset.quickTab;
+                saveState();
+                render();
+            };
+        });
         
         if (app.scheduleViewMode === 'editor') {
             attachEditorListeners(weekSchedules, days);
@@ -1952,12 +2024,33 @@
                 const typeUpper = dayData ? (dayData.type || 'Regular').toUpperCase() : 'OFF';
                 
                 if (!isActive || typeUpper === 'OFF') {
-                    const isOffColorBlack = (app.offRowColor || '#000000').toLowerCase() === '#000000';
-                    const offTextColor = isOffColorBlack ? '#000000' : '#ffffff';
-                    startText = isOffColorBlack ? '' : 'OFF';
-                    stopText = isOffColorBlack ? '' : 'OFF';
-                    startStyle = `background-color: ${app.offRowColor || '#000000'}; color: ${offTextColor};`;
-                    stopStyle = `background-color: ${app.offRowColor || '#000000'}; color: ${offTextColor};`;
+                    const offColor = app.offRowColor || '#ffffff';
+                    const isOffColorBlack = offColor.toLowerCase() === '#000000';
+                    const isOffColorWhite = offColor.toLowerCase() === '#ffffff';
+                    const isOffColorLightGrey = offColor.toLowerCase() === '#f3f4f6' || offColor.toLowerCase() === '#e5e7eb';
+                    
+                    let offTextColor = '#ffffff';
+                    if (isOffColorWhite) {
+                        offTextColor = '#ffffff';
+                        startText = '';
+                        stopText = '';
+                    } else if (isOffColorLightGrey) {
+                        offTextColor = offColor;
+                        startText = '';
+                        stopText = '';
+                    } else if (isOffColorBlack) {
+                        offTextColor = '#000000';
+                        startText = '';
+                        stopText = '';
+                    } else {
+                        const contrast = getContrastYIQ(offColor);
+                        offTextColor = contrast === 'white' ? '#ffffff' : '#6b7280';
+                        startText = 'OFF';
+                        stopText = 'OFF';
+                    }
+                    
+                    startStyle = `background-color: ${offColor}; color: ${offTextColor};`;
+                    stopStyle = `background-color: ${offColor}; color: ${offTextColor};`;
                     startClass = 'text-center font-black text-xs uppercase tracking-wider select-none';
                     stopClass = 'text-center font-black text-xs uppercase tracking-wider select-none';
                 } else {
