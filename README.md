@@ -1,20 +1,23 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Team Schedule
 
-# Run and deploy your AI Studio app
+A single-page HTML application for tracking team schedules, leaves, and attendance.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/95e05f92-8c3d-4df7-b740-aa005541ac62
+- **Schedule Tracking:** Manage weekly shifts with horizontal and vertical views.
+- **Leave Management:** Track vacation, sick days, and other absences.
+- **Dashboard:** Get a high-level overview of team availability and leave balances.
+- **Excel Sync:** Export and import all data via Excel files for easy sharing on OneDrive or local folders.
+- **Mobile Friendly:** Optimized for use on both desktop and mobile devices.
 
-## Run Locally
+## How to use
 
-**Prerequisites:**  Node.js
+1. Open `index.html` in any modern web browser (Chrome, Edge, Firefox, Safari).
+2. Start by adding employees and configuring absence types in the **Setup** tab.
+3. Manage weekly shifts in the **Schedule Tracker** tab.
+4. Log absences in the **Data Log** tab.
+5. Use the **Dashboard** to save your data to an Excel file. This file can be shared with co-workers and re-imported to stay in sync.
 
+## Data Persistence
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+The app saves data to your browser's local storage automatically. To share data or move between computers, use the **Save to Excel** and **Load from Excel** buttons on the Dashboard.
