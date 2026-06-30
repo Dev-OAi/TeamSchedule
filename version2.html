@@ -1700,6 +1700,11 @@
                              </button>
                          </div>
 
+                         <button id="export-ics-btn" class="flex items-center bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-semibold shadow-md transition-colors" title="Export to Outlook (.ics)">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                             <span class="ml-2 text-xs uppercase font-bold">Outlook Export</span>
+                         </button>
+
                          <button id="export-schedule-btn" class="flex items-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold shadow-md transition-colors" title="Export CURRENT WEEK only">
                              ${downloadIcon}<span class="ml-2 text-xs uppercase font-bold">Export Week</span>
                          </button>
@@ -1868,6 +1873,13 @@
         document.getElementById('export-schedule-btn').onclick = () => {
             exportScheduleToSpreadsheet();
         };
+
+        const exportIcsBtn = document.getElementById('export-ics-btn');
+        if (exportIcsBtn) {
+            exportIcsBtn.onclick = () => {
+                exportScheduleToICS();
+            };
+        }
 
         const loadExcelInputSched = document.getElementById('load-excel-input');
         if (loadExcelInputSched) {
@@ -2763,12 +2775,12 @@
                 if (dayData && dayData.active) empTotalHrs += getShiftHours(dayData);
             });
 
-            const isLastRowOfBlock = true;
-            const bottomBorderStyle = { style: "medium", color: { rgb: "9CA3AF" } };
+            const blockBottomBorder = { style: "medium", color: { rgb: "9CA3AF" } };
+            const cardLeftBorder = { style: "medium", color: { rgb: "D1D5DB" } };
 
-            const getNameStyle = { ...baseCellStyle, font: { bold: true, sz: 11 } };
-            const getRoleStyle = { ...baseCellStyle, font: { sz: 9, color: { rgb: "9CA3AF" } } };
-            const getTotalStyle = { ...baseCellStyle, alignment: { horizontal: "right" }, font: { sz: 9, color: { rgb: "4B5563" }, bold: true }, border: { ...baseCellStyle.border, bottom: bottomBorderStyle } };
+            const getNameStyle = { ...baseCellStyle, font: { bold: true, sz: 11 }, border: { ...baseCellStyle.border, left: cardLeftBorder } };
+            const getRoleStyle = { ...baseCellStyle, font: { sz: 9, color: { rgb: "9CA3AF" } }, border: { ...baseCellStyle.border, left: cardLeftBorder } };
+            const getTotalStyle = { ...baseCellStyle, alignment: { horizontal: "right", vertical: "bottom" }, font: { sz: 9, color: { rgb: "9CA3AF" } }, border: { ...baseCellStyle.border, left: cardLeftBorder, bottom: blockBottomBorder } };
 
             // Employee Info Col
             ws[XLSX.utils.encode_cell({ r: startRow, c: 0 })] = { v: emp.name, s: getNameStyle };
@@ -2786,7 +2798,7 @@
 
                 const cellStyleTop = { ...baseCellStyle };
                 const cellStyleMid = { ...baseCellStyle };
-                const cellStyleBot = { ...baseCellStyle, border: { ...baseCellStyle.border, bottom: bottomBorderStyle } };
+                const cellStyleBot = { ...baseCellStyle, alignment: { horizontal: "right", vertical: "bottom" }, border: { ...baseCellStyle.border, bottom: blockBottomBorder } };
 
                 if (isSpecialDay) {
                     const label = !dayData?.active ? 'OFF' : typeUpper;
@@ -2797,25 +2809,29 @@
                     else if (label.includes('HOLIDAY')) styleKey = 'HOLIDAY';
 
                     const style = bannerStyles[styleKey];
-                    const specialStyle = {
+                    const specialHeaderStyle = {
                         ...baseCellStyle,
                         fill: { fgColor: { rgb: style.bg } },
                         font: { bold: true, sz: 10, color: { rgb: style.text } },
                         alignment: { horizontal: "center", vertical: "center" }
                     };
 
-                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol })] = { v: label, s: specialStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 1 })] = { s: specialStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 2 })] = { s: specialStyle };
-                    merges.push({ s: { r: startRow, c: startCol }, e: { r: startRow + 1, c: startCol + 2 } });
+                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol })] = { v: label.includes('SICK') ? 'SICK TIME' : (label.includes('PERSONAL') ? 'PERSONAL DAY' : label), s: specialHeaderStyle };
+                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 1 })] = { s: specialHeaderStyle };
+                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 2 })] = { s: specialHeaderStyle };
+                    merges.push({ s: { r: startRow, c: startCol }, e: { r: startRow, c: startCol + 2 } });
+
+                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol })] = { s: baseCellStyle };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 1 })] = { s: baseCellStyle };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 2 })] = { s: baseCellStyle };
 
                     ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol })] = { s: cellStyleBot };
                     ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 1 })] = { s: cellStyleBot };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: { ...cellStyleBot, alignment: { horizontal: "right" }, font: { color: { rgb: "9CA3AF" } } } };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: { ...cellStyleBot, font: { color: { rgb: "9CA3AF" } } } };
                 } else {
                     // Regular Shift
-                    // Row 1: Location
-                    const locationVal = dayData.location || '';
+                    // Row 1: Location (Bold & Uppercase)
+                    const locationVal = (dayData.location || '').toUpperCase();
                     const isSpecialAssignment = locationVal.toLowerCase() === 'special assignment';
                     const locationStyle = {
                         ...cellStyleTop,
@@ -2832,10 +2848,10 @@
                     ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 1 })] = { v: format12HourTime(dayData.shiftOut), s: { ...cellStyleMid, alignment: { horizontal: "center" } } };
                     ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 2 })] = { v: formatBreakTime(dayData.breakMins), s: { ...cellStyleMid, alignment: { horizontal: "right" }, font: { color: { rgb: "9CA3AF" } } } };
 
-                    // Row 3: Role (Tag) and Day Total
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol })] = { v: dayData.role || '', s: { ...cellStyleBot, font: { sz: 8, color: { rgb: "9CA3AF" } } } };
+                    // Row 3: Role (Tag) and Day Total (Bottom Right)
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol })] = { v: dayData.role || '', s: { ...cellStyleBot, alignment: { horizontal: "left" }, font: { sz: 8, color: { rgb: "9CA3AF" } } } };
                     ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 1 })] = { s: cellStyleBot };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: { ...cellStyleBot, alignment: { horizontal: "right" }, font: { color: { rgb: "9CA3AF" } } } };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: { ...cellStyleBot, font: { color: { rgb: "9CA3AF" } } } };
                 }
             });
         });
@@ -2846,6 +2862,84 @@
 
         XLSX.utils.book_append_sheet(wb, ws, 'Weekly Schedule');
         XLSX.writeFile(wb, `Team_Schedule_Week_${app.scheduleWeekDate}.xlsx`);
+    }
+
+    function exportScheduleToICS() {
+        const currentWeekSchedules = getWeeklySchedule(app.scheduleWeekDate);
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const dayOffsets = { 'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6 };
+
+        let icsContent = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//Team Schedule//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH'
+        ];
+
+        const mondayDate = new Date(app.scheduleWeekDate + 'T12:00:00');
+
+        app.employees.forEach(emp => {
+            const empSched = currentWeekSchedules.find(s => s.employeeId === emp.id);
+            if (!empSched) return;
+
+            days.forEach(day => {
+                const dayData = empSched.days[day];
+                if (!dayData || !dayData.active) return;
+
+                // Skip if it's an absence and we only want work shifts,
+                // but let's include everything for now.
+                const typeUpper = (dayData.type || 'Regular').toUpperCase();
+                const isAbsence = ['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(typeUpper);
+
+                const eventDate = new Date(mondayDate);
+                eventDate.setDate(mondayDate.getDate() + dayOffsets[day]);
+                const dateStr = eventDate.toISOString().split('T')[0].replace(/-/g, '');
+
+                let startTime = '090000';
+                let endTime = '170000';
+                let summary = `${emp.name}: ${dayData.type || 'Shift'}`;
+
+                if (!isAbsence && dayData.shiftIn && dayData.shiftOut) {
+                    startTime = dayData.shiftIn.replace(/:/g, '') + '00';
+                    endTime = dayData.shiftOut.replace(/:/g, '') + '00';
+                    summary = `${emp.name}: ${dayData.location || 'Work'}`;
+                } else if (isAbsence) {
+                    // All day event for absence
+                    icsContent.push('BEGIN:VEVENT');
+                    icsContent.push(`UID:sched-${app.scheduleWeekDate}-${emp.id}-${day}`);
+                    icsContent.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+                    icsContent.push(`DTSTART;VALUE=DATE:${dateStr}`);
+                    icsContent.push(`DTEND;VALUE=DATE:${dateStr}`); // All-day events end on the next day usually, but some clients handle same day
+                    icsContent.push(`SUMMARY:${emp.name}: ${typeUpper}`);
+                    icsContent.push('END:VEVENT');
+                    return;
+                }
+
+                icsContent.push('BEGIN:VEVENT');
+                // Use a stable UID so Outlook can potentially update existing entries
+                icsContent.push(`UID:sched-${app.scheduleWeekDate}-${emp.id}-${day}`);
+                icsContent.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+                icsContent.push(`DTSTART:${dateStr}T${startTime}`);
+                icsContent.push(`DTEND:${dateStr}T${endTime}`);
+                icsContent.push(`SUMMARY:${summary}`);
+                icsContent.push(`LOCATION:${dayData.location || ''}`);
+                icsContent.push(`DESCRIPTION:Role: ${dayData.role || ''}\\nBreak: ${dayData.breakMins}m`);
+                icsContent.push('END:VEVENT');
+            });
+        });
+
+        icsContent.push('END:VCALENDAR');
+
+        const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.setAttribute('download', `Team_Schedule_${app.scheduleWeekDate}.ics`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast('Success', 'Outlook .ics file generated!', 'success');
     }
 
     function openSchedModal(employeeId, day, weekDate) {
