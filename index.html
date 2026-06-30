@@ -212,7 +212,7 @@
                 <!-- Role / Tag Override -->
                 <div>
                     <label for="sched-role" class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Role / Department Tag (Optional)</label>
-                    <input type="text" id="sched-role" placeholder="e.g. Teller, Platform, (Leave blank for default)" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none">
+                    <input type="text" id="sched-role" placeholder="e.g. Teller, Platform, (Leave blank for none)" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-yellow-500 outline-none">
                 </div>
                 
                 <!-- Save Buttons -->
@@ -308,6 +308,10 @@
                     schedules: {},
                     scheduleWeekDate: '',
                     scheduleViewMode: 'editor',
+                    layoutOrientation: 'horizontal',
+                    openBranchColor: '#d9ead3',
+                    closeBranchColor: '#f4cccc',
+                    offRowColor: '#000000',
                     showCoverageTotals: false,
                     defaultShiftIn: '08:30',
                     defaultShiftOut: '17:00',
@@ -1035,6 +1039,35 @@
                                         <option value="120" ${(app.defaultBreakMins === 120) ? 'selected' : ''}>2 hours (02:00)</option>
                                     </select>
                                 </div>
+                                <div class="border-t border-gray-100 pt-4 mt-4 space-y-3">
+                                    <h3 class="text-xs font-black text-gray-500 uppercase tracking-wider">Highlight Colors</h3>
+                                    <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Used in Vertical Layout to spot branch shifts & OFF days at a glance.</p>
+                                    
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="open-branch-color" class="block text-[10px] font-black text-gray-400 uppercase tracking-wider">Open Branch (Green)</label>
+                                            <div class="mt-1 flex items-center space-x-2">
+                                                <input type="color" id="open-branch-color" value="${app.openBranchColor || '#d9ead3'}" class="w-8 h-8 p-0 border border-gray-300 rounded-md cursor-pointer bg-white">
+                                                <span id="open-color-hex" class="text-xs font-bold font-mono text-gray-500">${app.openBranchColor || '#d9ead3'}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="close-branch-color" class="block text-[10px] font-black text-gray-400 uppercase tracking-wider">Close Branch (Pink)</label>
+                                            <div class="mt-1 flex items-center space-x-2">
+                                                <input type="color" id="close-branch-color" value="${app.closeBranchColor || '#f4cccc'}" class="w-8 h-8 p-0 border border-gray-300 rounded-md cursor-pointer bg-white">
+                                                <span id="close-color-hex" class="text-xs font-bold font-mono text-gray-500">${app.closeBranchColor || '#f4cccc'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="off-row-color" class="block text-[10px] font-black text-gray-400 uppercase tracking-wider">Inactive / OFF Day Row Color</label>
+                                        <div class="mt-1 flex items-center space-x-2">
+                                            <input type="color" id="off-row-color" value="${app.offRowColor || '#000000'}" class="w-8 h-8 p-0 border border-gray-300 rounded-md cursor-pointer bg-white">
+                                            <span id="off-color-hex" class="text-xs font-bold font-mono text-gray-500">${app.offRowColor || '#000000'}</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <button id="save-default-settings-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-bold shadow-md transition">Save Default Settings</button>
                             </div>
                         </div>
@@ -1104,11 +1137,19 @@
         document.querySelectorAll('.delete-employee').forEach(button => {
             button.addEventListener('click', (e) => {
                 const id = e.currentTarget.dataset.empId;
-                if (confirm(`Are you sure you want to delete this employee? All their log entries will also be removed.`)) {
-                    app.employees = app.employees.filter(emp => emp.id !== id);
-                    app.logEntries = app.logEntries.filter(log => log.employeeId !== id);
-                    saveState(); renderSetup();
-                }
+                const emp = app.employees.find(emp => emp.id === id);
+                const empName = emp ? emp.name : "this employee";
+                showConfirm(
+                    "Delete Employee",
+                    `Are you sure you want to delete ${empName}? All their schedule data and log entries will also be permanently removed.`,
+                    () => {
+                        app.employees = app.employees.filter(emp => emp.id !== id);
+                        app.logEntries = app.logEntries.filter(log => log.employeeId !== id);
+                        saveState(); 
+                        renderSetup();
+                        showToast("Deleted", `${empName} has been deleted.`, "info");
+                    }
+                );
             });
         });
         const leaveTypeListEl = document.getElementById('leave-type-list');
@@ -1121,7 +1162,7 @@
                     if (value) leaveType.name = value; else target.textContent = leaveType.name;
                 } else if (field === 'durationHHMM') {
                     const value = target.value;
-                    if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) leaveType.durationHHMM = value; else { target.value = leaveType.durationHHMM; alert('Invalid HH:MM format.'); }
+                    if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) leaveType.durationHHMM = value; else { target.value = leaveType.durationHHMM; showToast("Invalid Format", "Please use HH:MM format.", "info"); }
                 }
                 saveState();
             }
@@ -1135,11 +1176,19 @@
         });
         document.querySelectorAll('.delete-leavetype').forEach(button => {
             button.addEventListener('click', e => {
-                if(app.leaveTypes.length <= 1) { alert("You must have at least one absence type."); return; }
-                if(confirm('Are you sure you want to delete this absence type?')) {
-                    app.leaveTypes = app.leaveTypes.filter(lt => lt.id !== e.currentTarget.dataset.ltId);
-                    saveState(); renderSetup();
-                }
+                if(app.leaveTypes.length <= 1) { showToast("Notice", "You must have at least one absence type.", "info"); return; }
+                const ltId = e.currentTarget.dataset.ltId;
+                const ltName = app.leaveTypes.find(lt => lt.id === ltId)?.name || "this absence type";
+                showConfirm(
+                    "Delete Absence Type",
+                    `Are you sure you want to delete "${ltName}"?`,
+                    () => {
+                        app.leaveTypes = app.leaveTypes.filter(lt => lt.id !== ltId);
+                        saveState(); 
+                        renderSetup();
+                        showToast("Deleted", `Absence type "${ltName}" has been deleted.`, "info");
+                    }
+                );
             });
         });
         document.getElementById('add-leave-type-btn').addEventListener('click', () => { app.leaveTypes.push({ id: `lt${Date.now()}`, name: 'New Absence Type', durationHHMM: '08:00', color: '#888888' }); saveState(); renderSetup(); });
@@ -1178,14 +1227,42 @@
         }
 
         const saveDefaultBtn = document.getElementById('save-default-settings-btn');
+        
+        const openColorInput = document.getElementById('open-branch-color');
+        if (openColorInput) {
+            openColorInput.addEventListener('input', (e) => {
+                const label = document.getElementById('open-color-hex');
+                if (label) label.textContent = e.target.value;
+            });
+        }
+        const closeColorInput = document.getElementById('close-branch-color');
+        if (closeColorInput) {
+            closeColorInput.addEventListener('input', (e) => {
+                const label = document.getElementById('close-color-hex');
+                if (label) label.textContent = e.target.value;
+            });
+        }
+        const offColorInput = document.getElementById('off-row-color');
+        if (offColorInput) {
+            offColorInput.addEventListener('input', (e) => {
+                const label = document.getElementById('off-color-hex');
+                if (label) label.textContent = e.target.value;
+            });
+        }
+
         if (saveDefaultBtn) {
             saveDefaultBtn.addEventListener('click', () => {
                 app.defaultShiftIn = document.getElementById('default-shift-in').value;
                 app.defaultShiftOut = document.getElementById('default-shift-out').value;
                 app.defaultBreakMins = parseInt(document.getElementById('default-break').value, 10);
                 app.defaultShiftPreset = document.getElementById('default-preset') ? document.getElementById('default-preset').value : 'custom';
+                
+                if (openColorInput) app.openBranchColor = openColorInput.value;
+                if (closeColorInput) app.closeBranchColor = closeColorInput.value;
+                if (offColorInput) app.offRowColor = offColorInput.value;
+                
                 saveState();
-                showToast('Success', 'Default shift settings saved!', 'success');
+                showToast('Success', 'Default shift and highlight color settings saved!', 'success');
             });
         }
     }
@@ -1340,6 +1417,63 @@
         }, 3000);
     }
 
+    function showConfirm(title, message, onConfirm, okText = 'Confirm', isDestructive = true) {
+        let confirmModal = document.getElementById('custom-confirm-modal');
+        if (!confirmModal) {
+            confirmModal = document.createElement('div');
+            confirmModal.id = 'custom-confirm-modal';
+            confirmModal.className = 'modal fixed inset-0 bg-gray-900 bg-opacity-60 overflow-y-auto h-full w-full justify-center items-center z-[100]';
+            confirmModal.innerHTML = `
+                <div class="relative mx-auto p-6 border w-full max-w-sm shadow-2xl rounded-2xl bg-white border-gray-100 transform transition-all duration-300">
+                    <h3 id="custom-confirm-title" class="text-lg font-extrabold text-gray-900 mb-2">Are you sure?</h3>
+                    <p id="custom-confirm-message" class="text-sm text-gray-600 mb-6">This action cannot be undone.</p>
+                    <div class="flex justify-end space-x-3">
+                        <button id="custom-confirm-cancel-btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-bold transition">Cancel</button>
+                        <button id="custom-confirm-ok-btn" class="px-4 py-2 text-white rounded-lg text-sm font-bold transition shadow-md"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmModal);
+        }
+
+        document.getElementById('custom-confirm-title').textContent = title;
+        document.getElementById('custom-confirm-message').textContent = message;
+        
+        const okBtn = document.getElementById('custom-confirm-ok-btn');
+        okBtn.textContent = okText;
+        if (isDestructive) {
+            okBtn.className = 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition shadow-md';
+        } else {
+            okBtn.className = 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md';
+        }
+
+        const closeModal = () => {
+            confirmModal.classList.remove('is-open');
+        };
+
+        const onCancel = () => {
+            closeModal();
+        };
+
+        const onOk = () => {
+            closeModal();
+            if (typeof onConfirm === 'function') {
+                onConfirm();
+            }
+        };
+
+        const cancelBtn = document.getElementById('custom-confirm-cancel-btn');
+        cancelBtn.onclick = onCancel;
+        okBtn.onclick = onOk;
+        confirmModal.onclick = (e) => {
+            if (e.target === confirmModal) {
+                closeModal();
+            }
+        };
+
+        confirmModal.classList.add('is-open');
+    }
+
     function getWeeklySchedule(weekDate) {
         if (!app.schedules) {
             app.schedules = {};
@@ -1354,13 +1488,13 @@
                 empSched = {
                     employeeId: emp.id,
                     days: {
-                        "Mon": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
-                        "Tue": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
-                        "Wed": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
-                        "Thu": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
-                        "Fri": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
-                        "Sat": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' },
-                        "Sun": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: emp.role || '' }
+                        "Mon": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' },
+                        "Tue": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' },
+                        "Wed": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' },
+                        "Thu": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' },
+                        "Fri": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' },
+                        "Sat": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' },
+                        "Sun": { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' }
                     }
                 };
                 app.schedules[weekDate].push(empSched);
@@ -1396,7 +1530,11 @@
         
         let mainScheduleContent = '';
         if (app.scheduleViewMode === 'editor') {
-            mainScheduleContent = renderScheduleEditor(weekSchedules, days);
+            if (app.layoutOrientation === 'vertical') {
+                mainScheduleContent = renderScheduleVertical(weekSchedules, days);
+            } else {
+                mainScheduleContent = renderScheduleEditor(weekSchedules, days);
+            }
         } else {
             mainScheduleContent = renderScheduleCalendar(weekSchedules, days);
         }
@@ -1406,7 +1544,7 @@
                 <!-- Header -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                      <div>
-                         <h1 class="text-3xl font-bold text-gray-800">Team Schedule</h1>
+                         
                          <p class="text-sm text-gray-500 mt-1">Plan and manage team shifts, breaks, and track hours dynamically with Excel aesthetics.</p>
                      </div>
                      <div class="flex flex-wrap items-center gap-3">
@@ -1419,19 +1557,26 @@
                 
                 <!-- Week Selector Panel -->
                 <div class="bg-[#f1c232] text-black font-extrabold uppercase p-4 rounded-t-xl border border-gray-300 flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4 tracking-wider shadow-sm">
-                     <div class="flex items-center space-x-3">
-                         <button id="prev-week-btn" class="p-1.5 bg-black/15 hover:bg-black/25 rounded-md transition text-black font-black" aria-label="Previous week">◀</button>
-                         <span>WEEK OF = &gt;&gt;&gt; <span class="underline decoration-2 underline-offset-4 font-black text-black">${formatDateToMMDDYYYY(app.scheduleWeekDate)}</span> &lt;&lt;&lt;</span>
-                         <button id="next-week-btn" class="p-1.5 bg-black/15 hover:bg-black/25 rounded-md transition text-black font-black" aria-label="Next week">▶</button>
+                     <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                         <h1 class="text-2xl font-black text-black tracking-tight uppercase inline-block">Team Schedule</h1>
+                         
+                         
                      </div>
                      
                                           <div class="text-xs font-black tracking-normal">ADJUST THIS WHEN UPDATING</div>
                 </div>
                 <!-- White Control Bar Below Yellow Header -->
                 <div class="bg-white p-4 border-b border-x border-gray-300 rounded-b-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md w-full">
-                         <div class="flex items-center space-x-2">
-                             <label for="week-picker" class="text-xs font-black text-gray-500 uppercase tracking-wider">Jump to Week:</label>
-                             <input type="date" id="week-picker" value="${app.scheduleWeekDate}" class="p-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none" />
+                         <div class="flex flex-wrap items-center gap-3">
+                             <div class="flex items-center space-x-2">
+                                 <label for="week-picker" class="text-xs font-black text-gray-500 uppercase tracking-wider">Jump to Week:</label>
+                                 <input type="date" id="week-picker" value="${app.scheduleWeekDate}" class="p-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none" /></div><div class="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg border border-gray-200"><button id="prev-week-btn" class="px-2 py-0.5 hover:bg-gray-200 rounded-md transition text-black font-black text-xs" aria-label="Previous week">&lt;</button><button id="next-week-btn" class="px-2 py-0.5 hover:bg-gray-200 rounded-md transition text-black font-black text-xs" aria-label="Next week">&gt;</button></div><div class="hidden" style="display:none !important">
+                             </div>
+                             
+                             <div class="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
+                                 <button id="toggle-horizontal-view" class="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${app.layoutOrientation !== 'vertical' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}" title="Switch to Horizontal View">Horizontal</button>
+                                 <button id="toggle-vertical-view" class="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${app.layoutOrientation === 'vertical' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}" title="Switch to Vertical View">Vertical</button>
+                             </div>
                          </div>
                          
                          <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
@@ -1462,6 +1607,15 @@
         
         document.getElementById('view-mode-editor').onclick = () => { app.scheduleViewMode = 'editor'; saveState(); renderSchedule(); };
         document.getElementById('view-mode-calendar').onclick = () => { app.scheduleViewMode = 'calendar'; saveState(); renderSchedule(); };
+        
+        const toggleHorizontalBtn = document.getElementById('toggle-horizontal-view');
+        if (toggleHorizontalBtn) {
+            toggleHorizontalBtn.onclick = () => { app.layoutOrientation = 'horizontal'; saveState(); renderSchedule(); };
+        }
+        const toggleVerticalBtn = document.getElementById('toggle-vertical-view');
+        if (toggleVerticalBtn) {
+            toggleVerticalBtn.onclick = () => { app.layoutOrientation = 'vertical'; saveState(); renderSchedule(); };
+        }
         
         document.getElementById('prev-week-btn').onclick = () => {
             const current = new Date(app.scheduleWeekDate + 'T12:00:00');
@@ -1519,34 +1673,44 @@
             const defaultInFormatted = format12HourTime(defaultIn);
             const defaultOutFormatted = format12HourTime(defaultOut);
             
-            if (confirm(`Are you sure you want to pre-populate Mon-Fri shifts to ${defaultInFormatted} - ${defaultOutFormatted} with a ${defaultBreak} min break for all employees? (This overrides unsaved changes)`)) {
-                const sList = getWeeklySchedule(app.scheduleWeekDate);
-                sList.forEach(sched => {
-                    ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(day => {
-                        sched.days[day] = { active: true, type: 'Regular', location: '', shiftIn: defaultIn, shiftOut: defaultOut, breakMins: defaultBreak };
+            showConfirm(
+                "Pre-populate Shifts",
+                `Are you sure you want to pre-populate Mon-Fri shifts to ${defaultInFormatted} - ${defaultOutFormatted} with a ${defaultBreak} min break for all employees? (This overrides current weekly schedule changes)`,
+                () => {
+                    const sList = getWeeklySchedule(app.scheduleWeekDate);
+                    sList.forEach(sched => {
+                        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].forEach(day => {
+                            sched.days[day] = { active: true, type: 'Regular', location: '', shiftIn: defaultIn, shiftOut: defaultOut, breakMins: defaultBreak };
+                        });
+                        ['Sat', 'Sun'].forEach(day => {
+                            sched.days[day] = { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0 };
+                        });
                     });
-                    ['Sat', 'Sun'].forEach(day => {
-                        sched.days[day] = { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0 };
-                    });
-                });
-                saveState();
-                renderSchedule();
-                showToast('Success', 'Default shifts loaded!', 'success');
-            }
+                    saveState();
+                    renderSchedule();
+                    showToast('Success', 'Default shifts loaded!', 'success');
+                },
+                "Pre-populate",
+                false
+            );
         };
         
         document.getElementById('clear-week-btn').onclick = () => {
-            if (confirm('Clear all schedule details for this week?')) {
-                const sList = getWeeklySchedule(app.scheduleWeekDate);
-                sList.forEach(sched => {
-                    days.forEach(day => {
-                        sched.days[day] = { active: false, shiftIn: '', shiftOut: '', breakMins: 0 };
+            showConfirm(
+                "Clear Schedule",
+                "Are you sure you want to clear all schedule details for this week? All shifts will be set to OFF.",
+                () => {
+                    const sList = getWeeklySchedule(app.scheduleWeekDate);
+                    sList.forEach(sched => {
+                        days.forEach(day => {
+                            sched.days[day] = { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' };
+                        });
                     });
-                });
-                saveState();
-                renderSchedule();
-                showToast('Cleared', 'All days set to OFF for this week.', 'info');
-            }
+                    saveState();
+                    renderSchedule();
+                    showToast('Cleared', 'All days set to OFF for this week.', 'info');
+                }
+            );
         };
         
         document.getElementById('export-schedule-btn').onclick = () => {
@@ -1644,7 +1808,7 @@
                              <div class="flex-grow"></div>
                              <!-- Bottom Row: Role & Hours -->
                              <div class="flex justify-between items-center text-[10px] px-2 pb-2 pt-1 border-t border-gray-100/50 mt-1">
-                                 <span class="${empTextClass} font-bold">${dayData.role || emp.role || ''}</span>
+                                 <span class="${empTextClass} font-bold">${dayData.role || ''}</span>
                                  <span class="text-gray-400 font-bold">${formattedHrs}</span>
                              </div>
                         </div>
@@ -1662,11 +1826,12 @@
                         
                     cellClass = 'bg-white border-gray-300 hover:bg-gray-50/80';
                     cellContent = `
-                        <div class="flex flex-col h-full justify-between min-h-[75px] select-none text-left p-2 w-full">
-                             <!-- Top Row: Location -->
-                             <div class="pb-1 border-b border-gray-100/40">
-                                 ${locationHtml}
+                        <div class="flex flex-col h-full min-h-[75px] select-none text-left p-2 w-full">
+                             <!-- Top Row: Location (always has consistent height for neat horizontal alignment) -->
+                             <div class="pb-1 min-h-[22px] flex items-center ${locationStr.trim() ? 'border-b border-gray-100/40' : ''}">
+                                 ${locationStr.trim() ? locationHtml : '<span class="text-transparent select-none text-xs font-black uppercase tracking-tight">&nbsp;</span>'}
                              </div>
+                             <div class="flex-grow"></div>
                              <!-- Middle Row: Shift Times (12h format) and Break -->
                              <div class="grid grid-cols-3 items-center text-[11px] font-semibold text-[#434343] py-2">
                                  <div class="text-left">${format12HourTime(dayData.shiftIn)}</div>
@@ -1675,7 +1840,7 @@
                              </div>
                              <!-- Bottom Row: Role & Daily total hours -->
                              <div class="flex justify-between items-center text-[10px] pt-1 border-t border-gray-100/50">
-                                 <span class="${empTextClass} font-semibold uppercase tracking-tight">${dayData.role || emp.role || ''}</span>
+                                 <span class="${empTextClass} font-semibold uppercase tracking-tight">${dayData.role || ''}</span>
                                  <span class="${empTextClass} font-normal">${formatHoursToHHMMString(dayHrs)}</span>
                              </div>
                         </div>
@@ -1683,7 +1848,7 @@
                 }
                 
                 return `
-                    <td class="p-0 border-r border-b border-gray-300 transition-all cursor-pointer ${cellClass} schedule-cell align-top h-full" data-emp-id="${emp.id}" data-day="${day}">
+                    <td class="p-0 border-r border-b border-gray-300 transition-all cursor-pointer ${cellClass} schedule-cell align-top" style="height: 1px;" data-emp-id="${emp.id}" data-day="${day}">
                         ${cellContent}
                     </td>
                 `;
@@ -1694,7 +1859,7 @@
             
             return `
                 <tr class="hover:bg-gray-50/30 bg-white" data-emp-id="${emp.id}">
-                     <td class="p-2.5 border-r border-b border-gray-300 sticky-col group ${empBgClass} transition-all">
+                     <td class="p-2.5 border-r border-b border-gray-300 sticky-col group ${empBgClass} transition-all" style="height: 1px;">
                           <div class="flex flex-col h-full justify-between min-h-[75px]">
                                <div class="flex justify-between items-start">
                                    <span class="font-black text-sm text-[#434343]">${emp.name}</span>
@@ -1755,6 +1920,195 @@
                          </tfoot>
                      </table>
                  </div>
+            </div>
+        `;
+    }
+
+    function renderScheduleVertical(weekSchedules, days) {
+        const dayLabels = {
+            'Mon': 'Monday', 'Tue': 'Tuesday', 'Wed': 'Wednesday', 'Thu': 'Thursday', 'Fri': 'Friday', 'Sat': 'Saturday', 'Sun': 'Sunday'
+        };
+        
+        const monday = new Date(app.scheduleWeekDate + 'T12:00:00');
+        
+        const dayBlocksHtml = days.map((day, index) => {
+            const currentDate = new Date(monday);
+            currentDate.setDate(monday.getDate() + index);
+            const dateStr = `${currentDate.getMonth() + 1}/${currentDate.getDate()}/${currentDate.getFullYear()}`;
+            const dayLabel = dayLabels[day];
+            
+            const rowsHtml = app.employees.map(emp => {
+                const empSched = weekSchedules.find(s => s.employeeId === emp.id);
+                const dayData = empSched ? empSched.days[day] : null;
+                
+                let startText = '';
+                let stopText = '';
+                let startStyle = 'background-color: #ffffff; color: #1f2937;';
+                let stopStyle = 'background-color: #ffffff; color: #1f2937;';
+                let startClass = 'text-gray-800';
+                let stopClass = 'text-gray-800';
+                
+                const isActive = dayData && dayData.active;
+                const typeUpper = dayData ? (dayData.type || 'Regular').toUpperCase() : 'OFF';
+                
+                if (!isActive || typeUpper === 'OFF') {
+                    const isOffColorBlack = (app.offRowColor || '#000000').toLowerCase() === '#000000';
+                    const offTextColor = isOffColorBlack ? '#000000' : '#ffffff';
+                    startText = isOffColorBlack ? '' : 'OFF';
+                    stopText = isOffColorBlack ? '' : 'OFF';
+                    startStyle = `background-color: ${app.offRowColor || '#000000'}; color: ${offTextColor};`;
+                    stopStyle = `background-color: ${app.offRowColor || '#000000'}; color: ${offTextColor};`;
+                    startClass = 'text-center font-black text-xs uppercase tracking-wider select-none';
+                    stopClass = 'text-center font-black text-xs uppercase tracking-wider select-none';
+                } else {
+                    const isSpecialDay = typeUpper !== 'REGULAR' && typeUpper !== 'OPEN BRANCH' && typeUpper !== 'CLOSE BRANCH';
+                    
+                    if (isSpecialDay) {
+                        const lt = app.leaveTypes.find(l => l.name.toUpperCase() === typeUpper || l.id.toUpperCase() === typeUpper);
+                        const ltColor = lt?.color || '#6b7280';
+                        startText = dayData.type;
+                        stopText = dayData.type;
+                        startStyle = `background-color: ${ltColor}; color: white;`;
+                        stopStyle = `background-color: ${ltColor}; color: white;`;
+                        startClass = 'text-center font-black text-xs uppercase tracking-wider';
+                        stopClass = 'text-center font-black text-xs uppercase tracking-wider';
+                    } else if (typeUpper === 'OPEN BRANCH') {
+                        startText = '7:45 AM';
+                        stopText = '4:15 PM';
+                        startStyle = `background-color: ${app.openBranchColor || '#d9ead3'}; color: #274e13;`;
+                        stopStyle = `background-color: #ffffff; color: #1f2937;`;
+                    } else if (typeUpper === 'CLOSE BRANCH') {
+                        startText = '8:30 AM';
+                        stopText = '5:15 PM';
+                        startStyle = `background-color: #ffffff; color: #1f2937;`;
+                        stopStyle = `background-color: ${app.closeBranchColor || '#f4cccc'}; color: #cc0000;`;
+                    } else {
+                        const sIn = dayData.shiftIn || '';
+                        const sOut = dayData.shiftOut || '';
+                        
+                        startText = format12HourTime(sIn);
+                        stopText = format12HourTime(sOut);
+                        
+                        if (sIn === '07:45') {
+                            startStyle = `background-color: ${app.openBranchColor || '#d9ead3'}; color: #274e13;`;
+                        }
+                        if (sOut === '17:15') {
+                            stopStyle = `background-color: ${app.closeBranchColor || '#f4cccc'}; color: #cc0000;`;
+                        }
+                    }
+                }
+                
+                const empBgClass = getEmployeeBgColor(emp.cardColor);
+                
+                // Calculate weekly total hours for this employee
+                let empTotalHrs = 0;
+                if (empSched) {
+                    days.forEach(d => {
+                        const dData = empSched.days[d];
+                        if (dData && dData.active) {
+                            empTotalHrs += getShiftHours(dData);
+                        }
+                    });
+                }
+                const weeklyTotalFormatted = formatHoursToHHMMString(empTotalHrs);
+                
+                return `
+                    <tr class="schedule-cell cursor-pointer hover:bg-gray-50 transition-colors" data-emp-id="${emp.id}" data-day="${day}">
+                        <td class="px-4 py-2.5 border border-gray-300 font-semibold text-[#434343] text-sm ${empBgClass}" style="width: 220px;">
+                            <div class="flex flex-col h-full justify-between">
+                                <span class="font-black text-sm text-[#434343]">${emp.name}</span>
+                                <div class="flex justify-between items-center text-[10px] text-gray-500 font-normal uppercase mt-0.5 tracking-tight">
+                                    <span>${emp.role || ''}</span>
+                                    <span class="font-bold text-gray-400">${weeklyTotalFormatted}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-2.5 border border-gray-300 text-center font-bold text-sm ${startClass}" style="width: 150px; ${startStyle}">
+                            ${startText}
+                        </td>
+                        <td class="px-4 py-2.5 border border-gray-300 text-center font-bold text-sm ${stopClass}" style="width: 150px; ${stopStyle}">
+                            ${stopText}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Calculate daily coverage totals
+            let dayTotalHrs = 0;
+            let activeCount = 0;
+            app.employees.forEach(employee => {
+                const empSched = weekSchedules.find(s => s.employeeId === employee.id);
+                const dData = empSched ? empSched.days[day] : null;
+                if (dData && dData.active) {
+                    dayTotalHrs += getShiftHours(dData);
+                    activeCount++;
+                }
+            });
+            const dayTotalHrsFormatted = formatHoursToHHMMString(dayTotalHrs);
+            
+            return `
+                <div class="flex flex-col md:flex-row items-start gap-4 mb-8">
+                    <!-- Date Sidebar on left (Desktop-only) -->
+                    <div class="w-24 text-right font-black text-gray-500 text-xs pt-3 shrink-0 md:block hidden">
+                        <div class="text-xs font-black text-gray-500 tracking-wider">${dateStr}</div>
+                        <div class="text-[10px] text-gray-400 font-bold mt-0.5">${dayLabel.toUpperCase()}</div>
+                    </div>
+                    <!-- Date Banner (Mobile-only) -->
+                    <div class="font-black text-gray-400 text-xs block md:hidden mb-1 uppercase tracking-wider">
+                        Date: ${dateStr} (${dayLabel})
+                    </div>
+                    
+                    <div class="flex-grow overflow-x-auto w-full">
+                        <table class="border-collapse border border-gray-300 shadow-sm w-full" style="min-width: 500px; max-width: 650px;">
+                            <thead>
+                                <tr class="divide-x divide-gray-200">
+                                    <th class="px-4 py-2.5 bg-[#f3f4f6] text-[#434343] border border-gray-300 text-left font-black text-xs uppercase tracking-wider" style="width: 220px;">
+                                        Employee Name
+                                    </th>
+                                    <th class="px-4 py-2.5 bg-[#f3f4f6] text-gray-500 border border-gray-300 text-center font-black text-xs uppercase tracking-wider" style="width: 150px;">
+                                        Time Started
+                                    </th>
+                                    <th class="px-4 py-2.5 bg-[#f3f4f6] text-gray-500 border border-gray-300 text-center font-black text-xs uppercase tracking-wider" style="width: 150px;">
+                                        Time Stopped
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                ${rowsHtml}
+                            </tbody>
+                            <tfoot class="${app.showCoverageTotals ? '' : 'hidden'} border-t-2 border-gray-300 bg-gray-50">
+                                <tr class="divide-x divide-gray-200">
+                                    <td class="px-4 py-2.5 border border-gray-300 font-black text-[11px] text-gray-800 uppercase tracking-wider">
+                                        Daily Net Coverage
+                                    </td>
+                                    <td colspan="2" class="px-4 py-2.5 border border-gray-300 text-center font-black text-xs text-gray-800">
+                                        ${dayTotalHrsFormatted}
+                                    </td>
+                                </tr>
+                                <tr class="divide-x divide-gray-200 bg-gray-100/50">
+                                    <td class="px-4 py-2.5 border border-gray-300 font-black text-[10px] text-gray-600 uppercase tracking-wider">
+                                        Scheduled Staff Count
+                                    </td>
+                                    <td colspan="2" class="px-4 py-2.5 border border-gray-300 text-center font-black text-[10px] text-gray-500 uppercase tracking-wider">
+                                        ${activeCount} Active
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        return `
+            <div class="bg-white shadow-xl rounded-xl border border-gray-200 p-6 max-w-3xl mx-auto">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-3">
+                    <h2 class="text-sm font-black text-gray-500 uppercase tracking-wider">Daily Shift Details (Vertical View)</h2>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Click any row to edit</span>
+                </div>
+                <div class="space-y-4">
+                    ${dayBlocksHtml}
+                </div>
             </div>
         `;
     }
@@ -1839,10 +2193,10 @@
     }
 
     function attachEditorListeners(weekSchedules, days) {
-        const tableBody = mainContent.querySelector('tbody');
-        if (!tableBody) return;
+        const container = document.getElementById('schedule-view-container');
+        if (!container) return;
         
-        tableBody.addEventListener('click', e => {
+        container.addEventListener('click', e => {
             const target = e.target;
             
             // Check if clicked cell is a schedule cell (or child of it)
@@ -2033,7 +2387,7 @@
         document.getElementById('sched-in').value = isInitialAbsence ? '' : (dayData.shiftIn || '09:00');
         document.getElementById('sched-out').value = isInitialAbsence ? '' : (dayData.shiftOut || '17:00');
         document.getElementById('sched-break').value = String(isInitialAbsence ? 0 : (dayData.breakMins !== undefined ? dayData.breakMins : 60));
-        document.getElementById('sched-role').value = dayData.role || emp.role || '';
+        document.getElementById('sched-role').value = dayData.role || '';
         
         // Handle field visibility
         const regularFields = document.getElementById('sched-regular-fields');
@@ -2173,7 +2527,7 @@
                 dayData.shiftIn = document.getElementById('sched-in').value;
                 dayData.shiftOut = document.getElementById('sched-out').value;
                 dayData.breakMins = parseInt(document.getElementById('sched-break').value, 10) || 0;
-                dayData.role = document.getElementById('sched-role').value || emp.role || '';
+                dayData.role = document.getElementById('sched-role').value || '';
             } else {
                 dayData.location = '';
                 dayData.shiftIn = '';
@@ -2246,12 +2600,17 @@
 
         if (logEntry) {
             document.getElementById('modal-delete-btn').onclick = () => {
-                if(confirm('Are you sure you want to delete this leave entry?')) {
-                    app.logEntries = app.logEntries.filter(l => l.id !== logEntry.id);
-                    saveState();
-                    renderDashboard();
-                    closeEditModal();
-                }
+                showConfirm(
+                    "Delete Leave Entry",
+                    "Are you sure you want to delete this leave entry? This cannot be undone.",
+                    () => {
+                        app.logEntries = app.logEntries.filter(l => l.id !== logEntry.id);
+                        saveState();
+                        renderDashboard();
+                        closeEditModal();
+                        showToast("Deleted", "Leave entry has been deleted.", "info");
+                    }
+                );
             };
         }
 
