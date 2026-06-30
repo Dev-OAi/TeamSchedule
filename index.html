@@ -625,26 +625,6 @@
                       <label for="year-select" class="text-xs font-black text-gray-500 uppercase tracking-wider">Year:</label>
                       <input id="year-select" type="number" value="${app.currentYear}" class="p-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none w-24 shadow-inner" />
                   </div>
-                  <div class="flex flex-wrap items-center gap-3">
-                      <!-- Excel Persistence (Primary) -->
-                      <input type="file" id="load-excel-input" class="hidden" accept=".xlsx">
-                      <label for="load-excel-input" class="cursor-pointer flex items-center bg-emerald-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-emerald-700 font-semibold shadow-md text-xs transition-colors" title="Load data from an Excel file previously exported by this app">
-                        ${loadIcon}<span class="ml-1.5">Load from Excel</span>
-                      </label>
-                      <button id="download-btn" class="flex items-center bg-green-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-green-700 font-semibold shadow-md text-xs transition-colors" title="Export all data to an Excel file (Can be re-imported later)">
-                        ${downloadIcon}<span class="ml-1.5">Save to Excel</span>
-                      </button>
-
-                      <!-- JSON Backup (Secondary/Legacy) -->
-                      <div class="h-6 w-px bg-gray-300 mx-1"></div>
-                      <button id="save-btn" class="flex items-center bg-blue-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-blue-700 font-semibold shadow-md text-xs transition-colors" title="Download a JSON backup of the data">
-                        ${saveIcon}<span class="ml-1.5">JSON Backup</span>
-                      </button>
-                      <input type="file" id="load-data-input" class="hidden" accept=".json">
-                      <label for="load-data-input" class="cursor-pointer flex items-center bg-gray-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-gray-700 font-semibold shadow-md text-xs transition-colors">
-                        ${loadIcon}<span class="ml-1.5">Load JSON</span>
-                      </label>
-                  </div>
               </div>
               
               <div class="bg-white shadow-lg rounded-xl overflow-hidden mt-8">
@@ -692,14 +672,19 @@
             };
             reader.readAsText(file);
         });
-        mainContent.querySelector('#download-btn').addEventListener('click', () => { exportToSpreadsheet(app.employees, app.logEntries, app.leaveTypes, app.currentYear); });
-        mainContent.querySelector('#load-excel-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                importFromExcel(file);
-                e.target.value = '';
-            }
-        });
+        const downloadBtn = mainContent.querySelector('#download-btn');
+        if (downloadBtn) downloadBtn.addEventListener('click', () => { exportToSpreadsheet(app.employees, app.logEntries, app.leaveTypes, app.currentYear); });
+
+        const loadExcelInput = mainContent.querySelector('#load-excel-input');
+        if (loadExcelInput) {
+            loadExcelInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    importFromExcel(file);
+                    e.target.value = '';
+                }
+            });
+        }
         mainContent.querySelectorAll('.sortable').forEach(header => {
             header.addEventListener('click', () => {
                 const key = header.dataset.sortKey;
@@ -1672,8 +1657,32 @@
                      </div>
                      <div class="flex flex-wrap items-center gap-3">
                          ${viewToggleHtml}
-                         <button id="export-schedule-btn" class="flex items-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold shadow-md transition-colors">
-                             ${downloadIcon}<span class="ml-2">Export Schedule (.xlsx)</span>
+
+                         <!-- Compact Persistence Buttons -->
+                         <div class="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg border border-gray-200">
+                             <!-- Excel Operations -->
+                             <input type="file" id="load-excel-input" class="hidden" accept=".xlsx">
+                             <label for="load-excel-input" class="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer" title="Load from Excel">
+                                 ${loadIcon}
+                             </label>
+                             <button id="save-excel-btn" class="p-1.5 rounded-md text-green-600 hover:bg-green-50 transition-all" title="Save to Excel">
+                                 ${downloadIcon}
+                             </button>
+
+                             <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
+
+                             <!-- JSON Operations -->
+                             <input type="file" id="load-json-input" class="hidden" accept=".json">
+                             <label for="load-json-input" class="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 transition-all cursor-pointer" title="Load JSON Backup">
+                                 ${loadIcon}
+                             </label>
+                             <button id="save-json-btn" class="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-all" title="JSON Backup">
+                                 ${saveIcon}
+                             </button>
+                         </div>
+
+                         <button id="export-schedule-btn" class="flex items-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold shadow-md transition-colors" title="Export CURRENT WEEK only">
+                             ${downloadIcon}<span class="ml-2 text-xs uppercase font-bold">Export Week</span>
                          </button>
                      </div>
                 </div>
@@ -1840,6 +1849,64 @@
         document.getElementById('export-schedule-btn').onclick = () => {
             exportScheduleToSpreadsheet();
         };
+
+        const loadExcelInputSched = document.getElementById('load-excel-input');
+        if (loadExcelInputSched) {
+            loadExcelInputSched.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    importFromExcel(file);
+                    e.target.value = '';
+                }
+            };
+        }
+
+        const saveExcelBtn = document.getElementById('save-excel-btn');
+        if (saveExcelBtn) {
+            saveExcelBtn.onclick = () => {
+                exportToSpreadsheet(app.employees, app.logEntries, app.leaveTypes, app.currentYear);
+            };
+        }
+
+        const loadJsonInput = document.getElementById('load-json-input');
+        if (loadJsonInput) {
+            loadJsonInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const loadedData = JSON.parse(event.target.result);
+                        if (loadedData.employees && loadedData.logEntries && loadedData.leaveTypes) {
+                            app = loadedData;
+                            // Fix dates
+                            app.dailyCalendarDate = new Date(app.dailyCalendarDate);
+                            app.monthlyCalendarDate = new Date(app.monthlyCalendarDate);
+                            saveState();
+                            render();
+                            showToast('Success', 'JSON Data loaded successfully!', 'success');
+                        } else { alert('Invalid data file format.'); }
+                    } catch (err) { alert('Error reading or parsing data file.'); console.error(err); }
+                    finally { e.target.value = ''; }
+                };
+                reader.readAsText(file);
+            };
+        }
+
+        const saveJsonBtn = document.getElementById('save-json-btn');
+        if (saveJsonBtn) {
+            saveJsonBtn.onclick = () => {
+                const dataStr = JSON.stringify(app, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `team-schedule-backup-${app.currentYear}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Success', 'JSON Backup downloaded.', 'success');
+            };
+        }
 
         document.querySelectorAll('[data-quick-tab]').forEach(btn => {
             btn.onclick = () => {
