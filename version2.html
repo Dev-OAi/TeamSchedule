@@ -2700,34 +2700,25 @@
             fill: { fgColor: { rgb: "F3F4F6" } },
             alignment: { horizontal: "center", vertical: "center" },
             border: {
-                top: { style: "thin", color: { rgb: "D1D5DB" } },
-                bottom: { style: "thin", color: { rgb: "D1D5DB" } },
-                left: { style: "thin", color: { rgb: "D1D5DB" } },
-                right: { style: "thin", color: { rgb: "D1D5DB" } }
+                top: { style: "thin", color: { rgb: "9CA3AF" } },
+                bottom: { style: "thin", color: { rgb: "9CA3AF" } },
+                left: { style: "thin", color: { rgb: "9CA3AF" } },
+                right: { style: "thin", color: { rgb: "9CA3AF" } }
             }
         };
         const branchHeaderStyle = {
             ...headerStyle,
             font: { bold: true, sz: 12 }
         };
-        const cellStyle = {
+        const baseCellStyle = {
             font: { name: 'Inter', sz: 9 },
             alignment: { vertical: "center" },
             border: {
-                top: { style: "thin", color: { rgb: "E5E7EB" } },
-                bottom: { style: "thin", color: { rgb: "E5E7EB" } },
-                left: { style: "thin", color: { rgb: "E5E7EB" } },
-                right: { style: "thin", color: { rgb: "E5E7EB" } }
+                top: { style: "thin", color: { rgb: "D1D5DB" } },
+                bottom: { style: "thin", color: { rgb: "D1D5DB" } },
+                left: { style: "thin", color: { rgb: "D1D5DB" } },
+                right: { style: "thin", color: { rgb: "D1D5DB" } }
             }
-        };
-        const nameStyle = { ...cellStyle, font: { bold: true, sz: 11 } };
-        const roleStyle = { ...cellStyle, font: { sz: 9, color: { rgb: "9CA3AF" } } };
-        const totalStyle = { ...cellStyle, alignment: { horizontal: "right" }, font: { sz: 9, color: { rgb: "9CA3AF" } } };
-        const specialDayStyle = {
-            ...cellStyle,
-            fill: { fgColor: { rgb: "F3F4F6" } },
-            alignment: { horizontal: "center", vertical: "center" },
-            font: { bold: true, sz: 10, color: { rgb: "374151" } }
         };
 
         const bannerStyles = {
@@ -2772,10 +2763,17 @@
                 if (dayData && dayData.active) empTotalHrs += getShiftHours(dayData);
             });
 
+            const isLastRowOfBlock = true;
+            const bottomBorderStyle = { style: "medium", color: { rgb: "9CA3AF" } };
+
+            const getNameStyle = { ...baseCellStyle, font: { bold: true, sz: 11 } };
+            const getRoleStyle = { ...baseCellStyle, font: { sz: 9, color: { rgb: "9CA3AF" } } };
+            const getTotalStyle = { ...baseCellStyle, alignment: { horizontal: "right" }, font: { sz: 9, color: { rgb: "4B5563" }, bold: true }, border: { ...baseCellStyle.border, bottom: bottomBorderStyle } };
+
             // Employee Info Col
-            ws[XLSX.utils.encode_cell({ r: startRow, c: 0 })] = { v: emp.name, s: nameStyle };
-            ws[XLSX.utils.encode_cell({ r: startRow + 1, c: 0 })] = { v: emp.role || '', s: roleStyle };
-            ws[XLSX.utils.encode_cell({ r: startRow + 2, c: 0 })] = { v: formatHoursToHHMMString(empTotalHrs), s: totalStyle };
+            ws[XLSX.utils.encode_cell({ r: startRow, c: 0 })] = { v: emp.name, s: getNameStyle };
+            ws[XLSX.utils.encode_cell({ r: startRow + 1, c: 0 })] = { v: emp.role || '', s: getRoleStyle };
+            ws[XLSX.utils.encode_cell({ r: startRow + 2, c: 0 })] = { v: formatHoursToHHMMString(empTotalHrs), s: getTotalStyle };
 
             // Day Cells
             days.forEach((day, dayIdx) => {
@@ -2785,6 +2783,10 @@
 
                 const typeUpper = (dayData?.type || '').toUpperCase();
                 const isSpecialDay = !dayData?.active || (typeUpper !== 'REGULAR' && typeUpper !== 'OFF' && typeUpper !== 'OPEN BRANCH' && typeUpper !== 'CLOSE BRANCH');
+
+                const cellStyleTop = { ...baseCellStyle };
+                const cellStyleMid = { ...baseCellStyle };
+                const cellStyleBot = { ...baseCellStyle, border: { ...baseCellStyle.border, bottom: bottomBorderStyle } };
 
                 if (isSpecialDay) {
                     const label = !dayData?.active ? 'OFF' : typeUpper;
@@ -2796,7 +2798,7 @@
 
                     const style = bannerStyles[styleKey];
                     const specialStyle = {
-                        ...cellStyle,
+                        ...baseCellStyle,
                         fill: { fgColor: { rgb: style.bg } },
                         font: { bold: true, sz: 10, color: { rgb: style.text } },
                         alignment: { horizontal: "center", vertical: "center" }
@@ -2807,28 +2809,38 @@
                     ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 2 })] = { s: specialStyle };
                     merges.push({ s: { r: startRow, c: startCol }, e: { r: startRow + 1, c: startCol + 2 } });
 
-                    // Bottom row for Day Total in special day
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol })] = { s: cellStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 1 })] = { s: cellStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: totalStyle };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol })] = { s: cellStyleBot };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 1 })] = { s: cellStyleBot };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: { ...cellStyleBot, alignment: { horizontal: "right" }, font: { color: { rgb: "9CA3AF" } } } };
                 } else {
                     // Regular Shift
-                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol })] = { v: format12HourTime(dayData.shiftIn), s: cellStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 1 })] = { v: format12HourTime(dayData.shiftOut), s: cellStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 2 })] = { v: formatBreakTime(dayData.breakMins), s: { ...cellStyle, font: { color: { rgb: "9CA3AF" } } } };
+                    // Row 1: Location
+                    const locationVal = dayData.location || '';
+                    const isSpecialAssignment = locationVal.toLowerCase() === 'special assignment';
+                    const locationStyle = {
+                        ...cellStyleTop,
+                        font: { bold: true, italic: isSpecialAssignment, sz: 9, color: { rgb: isSpecialAssignment ? "CC0000" : "434343" } },
+                        alignment: { horizontal: "left" }
+                    };
+                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol })] = { v: locationVal, s: locationStyle };
+                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 1 })] = { s: cellStyleTop };
+                    ws[XLSX.utils.encode_cell({ r: startRow, c: startCol + 2 })] = { s: cellStyleTop };
+                    merges.push({ s: { r: startRow, c: startCol }, e: { r: startRow, c: startCol + 2 } });
 
-                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol })] = { s: cellStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 1 })] = { s: cellStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 2 })] = { s: cellStyle };
+                    // Row 2: Shift In, Shift Out, Break
+                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol })] = { v: format12HourTime(dayData.shiftIn), s: { ...cellStyleMid, alignment: { horizontal: "left" } } };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 1 })] = { v: format12HourTime(dayData.shiftOut), s: { ...cellStyleMid, alignment: { horizontal: "center" } } };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 1, c: startCol + 2 })] = { v: formatBreakTime(dayData.breakMins), s: { ...cellStyleMid, alignment: { horizontal: "right" }, font: { color: { rgb: "9CA3AF" } } } };
 
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol })] = { v: dayData.role || '', s: { ...cellStyle, font: { sz: 8, color: { rgb: "9CA3AF" } } } };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 1 })] = { s: cellStyle };
-                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: totalStyle };
+                    // Row 3: Role (Tag) and Day Total
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol })] = { v: dayData.role || '', s: { ...cellStyleBot, font: { sz: 8, color: { rgb: "9CA3AF" } } } };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 1 })] = { s: cellStyleBot };
+                    ws[XLSX.utils.encode_cell({ r: startRow + 2, c: startCol + 2 })] = { v: formatHoursToHHMMString(dayHrs), s: { ...cellStyleBot, alignment: { horizontal: "right" }, font: { color: { rgb: "9CA3AF" } } } };
                 }
             });
         });
 
-                        ws['!merges'] = merges;
+        ws['!merges'] = merges;
         const range = { s: { r: 0, c: 0 }, e: { r: 2 + app.employees.length * 3 - 1, c: 1 + days.length * 3 - 1 } };
         ws['!ref'] = XLSX.utils.encode_range(range);
 
