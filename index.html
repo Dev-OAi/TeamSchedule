@@ -50,16 +50,28 @@
         #main-content {
             transition: opacity 0.2s ease-in-out;
         }
+        @media (max-width: 768px) {
+            #sidebar {
+                position: fixed;
+                height: 100vh;
+                z-index: 50;
+            }
+            #main-content-viewport {
+                padding-left: 0 !important;
+            }
+        }
         .fade-out {
             opacity: 0;
         }
         .modal { display: none; }
         .modal.is-open { display: flex; }
     </style>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-gray-100">
-    <div class="min-h-screen flex font-sans relative">
+    <div class="min-h-screen flex font-sans relative overflow-x-hidden">
+        <!-- Sidebar Overlay (mobile) -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"></div>
+
         <!-- Expand Sidebar Tab (visible when sidebar is collapsed) -->
         <button id="sidebar-expand-btn" class="fixed left-0 top-8 z-40 bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-r-xl py-3.5 px-2 flex items-center justify-center transition-all cursor-pointer focus:outline-none" title="Expand Menu">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -245,9 +257,9 @@
             { id: 'other', name: 'Other', durationHHMM: '08:00', color: '#10b981' },
         ],
         employees: [
-            { id: 'emp1', name: 'Alice Smith', role: 'BM', cardColor: 'gray', vacationAllotment: 15 },
+            { id: 'emp1', name: 'Alice Smith', role: 'BM', cardColor: 'white', vacationAllotment: 15 },
             { id: 'emp2', name: 'Bob Johnson', role: 'ABM', cardColor: 'white', vacationAllotment: 20 },
-            { id: 'emp3', name: 'Charlie Brown', role: 'BOC', cardColor: 'blue', vacationAllotment: 15 },
+            { id: 'emp3', name: 'Charlie Brown', role: 'BOC', cardColor: 'white', vacationAllotment: 15 },
         ],
         logEntries: [
             { id: 'log1', date: '2024-01-15', employeeId: 'emp1', leaveTypeId: 'vacation', duration: 1, notes: 'Pre-approved' },
@@ -266,8 +278,8 @@
         defaultBreakMins: 45,
         defaultShiftPreset: 'standard',
         offRowColor: '#ffffff',
-        showSaturday: true,
-        showSunday: true
+        showSaturday: false,
+        showSunday: false
     };
 
     // --- DOM ELEMENTS ---
@@ -285,14 +297,17 @@
     // --- DATA PERSISTENCE ---
     function saveState() {
         try {
-            localStorage.setItem('leaveTrackerData_v4', JSON.stringify(app));
+            localStorage.setItem('teamScheduleTrackerData_v1', JSON.stringify(app));
         } catch (e) {
             console.error("Could not save data to local storage.", e);
         }
     }
     
     function loadState() {
-        const savedData = localStorage.getItem('leaveTrackerData_v4');
+        let savedData = localStorage.getItem('teamScheduleTrackerData_v1');
+        if (!savedData) {
+            savedData = localStorage.getItem('leaveTrackerData_v4');
+        }
         if (savedData) {
             try {
                 const parsedData = JSON.parse(savedData);
@@ -320,8 +335,8 @@
                     defaultShiftOut: '17:00',
                     defaultBreakMins: 45,
                     defaultShiftPreset: 'standard',
-                    showSaturday: true,
-                    showSunday: true,
+                    showSaturday: false,
+                    showSunday: false,
                     ...parsedData
                 };
                 
@@ -512,7 +527,7 @@
                  <div class="flex items-center space-x-1 bg-black/10 p-0.5 rounded-lg border border-black/5 shadow-inner shrink-0">
                      <!-- Team Schedule Quick Button -->
                      <button data-quick-tab="Schedule" class="${getButtonClass('Schedule')} relative group" title="Team Schedule" aria-label="Team Schedule">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                           <span class="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] font-black text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition duration-150 pointer-events-none whitespace-nowrap z-50 shadow-md">Team Schedule</span>
                      </button>
                      <!-- Dashboard Quick Button -->
@@ -530,7 +545,7 @@
                      
                      <!-- Setup Quick Button (Settings) -->
                      <button data-quick-tab="Setup" class="${getButtonClass('Setup')} relative group" title="Setup Settings" aria-label="Setup Settings">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                           <span class="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] font-black text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition duration-150 pointer-events-none whitespace-nowrap z-50 shadow-md">Setup Settings</span>
                      </button>
                  </div>
@@ -554,7 +569,7 @@
     // --- DASHBOARD VIEW ---
     function renderDashboard() {
         if (app.employees.length === 0) {
-            renderEmptyState('Welcome to your Leave Tracker!', 'Add your first employee in the Setup tab to get started.', 'Go to Setup', () => { app.activeTab = 'Setup'; render(); });
+            renderEmptyState('Welcome to Team Schedule!', 'Add your first employee in the Setup tab to get started.', 'Go to Setup', () => { app.activeTab = 'Setup'; render(); });
             return;
         }
         
@@ -610,18 +625,6 @@
                       <label for="year-select" class="text-xs font-black text-gray-500 uppercase tracking-wider">Year:</label>
                       <input id="year-select" type="number" value="${app.currentYear}" class="p-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none w-24 shadow-inner" />
                   </div>
-                  <div class="flex flex-wrap items-center gap-3">
-                      <button id="save-btn" class="flex items-center bg-blue-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-blue-700 font-semibold shadow-md text-xs transition-colors">
-                        ${saveIcon}<span class="ml-1.5">Save Data</span>
-                      </button>
-                      <input type="file" id="load-data-input" class="hidden" accept=".json">
-                      <label for="load-data-input" class="cursor-pointer flex items-center bg-gray-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-gray-700 font-semibold shadow-md text-xs transition-colors">
-                        ${loadIcon}<span class="ml-1.5">Load Data</span>
-                      </label>
-                      <button id="download-btn" class="flex items-center bg-green-600 text-white py-1.5 px-3.5 rounded-lg hover:bg-green-700 font-semibold shadow-md text-xs transition-colors">
-                        ${downloadIcon}<span class="ml-1.5">Download (.xlsx)</span>
-                      </button>
-                  </div>
               </div>
               
               <div class="bg-white shadow-lg rounded-xl overflow-hidden mt-8">
@@ -669,7 +672,19 @@
             };
             reader.readAsText(file);
         });
-        mainContent.querySelector('#download-btn').addEventListener('click', () => { exportToSpreadsheet(app.employees, app.logEntries, app.leaveTypes, app.currentYear); });
+        const downloadBtn = mainContent.querySelector('#download-btn');
+        if (downloadBtn) downloadBtn.addEventListener('click', () => { exportToSpreadsheet(app.employees, app.logEntries, app.leaveTypes, app.currentYear); });
+
+        const loadExcelInput = mainContent.querySelector('#load-excel-input');
+        if (loadExcelInput) {
+            loadExcelInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    importFromExcel(file);
+                    e.target.value = '';
+                }
+            });
+        }
         mainContent.querySelectorAll('.sortable').forEach(header => {
             header.addEventListener('click', () => {
                 const key = header.dataset.sortKey;
@@ -1642,8 +1657,32 @@
                      </div>
                      <div class="flex flex-wrap items-center gap-3">
                          ${viewToggleHtml}
-                         <button id="export-schedule-btn" class="flex items-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold shadow-md transition-colors">
-                             ${downloadIcon}<span class="ml-2">Export Schedule (.xlsx)</span>
+
+                         <!-- Compact Persistence Buttons -->
+                         <div class="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg border border-gray-200">
+                             <!-- Excel Operations -->
+                             <input type="file" id="load-excel-input" class="hidden" accept=".xlsx">
+                             <label for="load-excel-input" class="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer" title="Load from Excel">
+                                 ${loadIcon}
+                             </label>
+                             <button id="save-excel-btn" class="p-1.5 rounded-md text-green-600 hover:bg-green-50 transition-all" title="Save to Excel">
+                                 ${downloadIcon}
+                             </button>
+
+                             <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
+
+                             <!-- JSON Operations -->
+                             <input type="file" id="load-json-input" class="hidden" accept=".json">
+                             <label for="load-json-input" class="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 transition-all cursor-pointer" title="Load JSON Backup">
+                                 ${loadIcon}
+                             </label>
+                             <button id="save-json-btn" class="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-all" title="JSON Backup">
+                                 ${saveIcon}
+                             </button>
+                         </div>
+
+                         <button id="export-schedule-btn" class="flex items-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 font-semibold shadow-md transition-colors" title="Export CURRENT WEEK only">
+                             ${downloadIcon}<span class="ml-2 text-xs uppercase font-bold">Export Week</span>
                          </button>
                      </div>
                 </div>
@@ -1811,6 +1850,64 @@
             exportScheduleToSpreadsheet();
         };
 
+        const loadExcelInputSched = document.getElementById('load-excel-input');
+        if (loadExcelInputSched) {
+            loadExcelInputSched.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    importFromExcel(file);
+                    e.target.value = '';
+                }
+            };
+        }
+
+        const saveExcelBtn = document.getElementById('save-excel-btn');
+        if (saveExcelBtn) {
+            saveExcelBtn.onclick = () => {
+                exportToSpreadsheet(app.employees, app.logEntries, app.leaveTypes, app.currentYear);
+            };
+        }
+
+        const loadJsonInput = document.getElementById('load-json-input');
+        if (loadJsonInput) {
+            loadJsonInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const loadedData = JSON.parse(event.target.result);
+                        if (loadedData.employees && loadedData.logEntries && loadedData.leaveTypes) {
+                            app = loadedData;
+                            // Fix dates
+                            app.dailyCalendarDate = new Date(app.dailyCalendarDate);
+                            app.monthlyCalendarDate = new Date(app.monthlyCalendarDate);
+                            saveState();
+                            render();
+                            showToast('Success', 'JSON Data loaded successfully!', 'success');
+                        } else { alert('Invalid data file format.'); }
+                    } catch (err) { alert('Error reading or parsing data file.'); console.error(err); }
+                    finally { e.target.value = ''; }
+                };
+                reader.readAsText(file);
+            };
+        }
+
+        const saveJsonBtn = document.getElementById('save-json-btn');
+        if (saveJsonBtn) {
+            saveJsonBtn.onclick = () => {
+                const dataStr = JSON.stringify(app, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `team-schedule-backup-${app.currentYear}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Success', 'JSON Backup downloaded.', 'success');
+            };
+        }
+
         document.querySelectorAll('[data-quick-tab]').forEach(btn => {
             btn.onclick = () => {
                 app.activeTab = btn.dataset.quickTab;
@@ -1819,7 +1916,7 @@
             };
         });
         
-        if (app.scheduleViewMode === 'editor') {
+        if (app.scheduleViewMode === 'editor' || app.layoutOrientation === 'vertical') {
             attachEditorListeners(weekSchedules, days);
         }
     }
@@ -2116,13 +2213,13 @@
                         startClass = 'text-center font-black text-xs uppercase tracking-wider';
                         stopClass = 'text-center font-black text-xs uppercase tracking-wider';
                     } else if (typeUpper === 'OPEN BRANCH') {
-                        startText = '7:45 AM';
-                        stopText = '4:15 PM';
+                        startText = format12HourTime(dayData.shiftIn || '07:45');
+                        stopText = format12HourTime(dayData.shiftOut || '16:15');
                         startStyle = `background-color: ${app.openBranchColor || '#d9ead3'}; color: #274e13;`;
                         stopStyle = `background-color: #ffffff; color: #1f2937;`;
                     } else if (typeUpper === 'CLOSE BRANCH') {
-                        startText = '8:30 AM';
-                        stopText = '5:15 PM';
+                        startText = format12HourTime(dayData.shiftIn || '08:30');
+                        stopText = format12HourTime(dayData.shiftOut || '17:15');
                         startStyle = `background-color: #ffffff; color: #1f2937;`;
                         stopStyle = `background-color: ${app.closeBranchColor || '#f4cccc'}; color: #cc0000;`;
                     } else {
@@ -2156,20 +2253,25 @@
                 const weeklyTotalFormatted = formatHoursToHHMMString(empTotalHrs);
                 
                 return `
-                    <tr class="schedule-cell cursor-pointer hover:bg-gray-50 transition-colors" data-emp-id="${emp.id}" data-day="${day}">
-                        <td class="px-4 py-2.5 border border-gray-300 font-semibold text-[#434343] text-sm ${empBgClass}" style="width: 220px;">
+                    <tr class="group" data-emp-id="${emp.id}">
+                        <td class="px-4 py-2.5 border border-gray-300 font-semibold text-[#434343] text-sm ${empBgClass} relative" style="width: 220px;">
                             <div class="flex flex-col h-full justify-between">
-                                <span class="font-black text-sm text-[#434343]">${emp.name}</span>
+                                <div class="flex justify-between items-start">
+                                    <span class="font-black text-sm text-[#434343]">${emp.name}</span>
+                                    <button class="row-delete-inline-btn text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-all opacity-0 group-hover:opacity-100 cursor-pointer" data-emp-id="${emp.id}" title="Delete Row">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                    </button>
+                                </div>
                                 <div class="flex justify-between items-center text-[10px] text-gray-500 font-normal uppercase mt-0.5 tracking-tight">
                                     <span>${emp.role || ''}</span>
                                     <span class="font-bold text-gray-400">${weeklyTotalFormatted}</span>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-4 py-2.5 border border-gray-300 text-center font-bold text-sm ${startClass}" style="width: 150px; ${startStyle}">
+                        <td class="schedule-cell cursor-pointer px-4 py-2.5 border border-gray-300 text-center font-bold text-sm ${startClass}" style="width: 150px; ${startStyle}" data-emp-id="${emp.id}" data-day="${day}">
                             ${startText}
                         </td>
-                        <td class="px-4 py-2.5 border border-gray-300 text-center font-bold text-sm ${stopClass}" style="width: 150px; ${stopStyle}">
+                        <td class="schedule-cell cursor-pointer px-4 py-2.5 border border-gray-300 text-center font-bold text-sm ${stopClass}" style="width: 150px; ${stopStyle}" data-emp-id="${emp.id}" data-day="${day}">
                             ${stopText}
                         </td>
                     </tr>
@@ -2209,10 +2311,10 @@
                                         Employee Name
                                     </th>
                                     <th class="px-4 py-2.5 bg-[#f3f4f6] text-gray-500 border border-gray-300 text-center font-black text-xs uppercase tracking-wider" style="width: 150px;">
-                                        Time Started
+                                        Shift In
                                     </th>
                                     <th class="px-4 py-2.5 bg-[#f3f4f6] text-gray-500 border border-gray-300 text-center font-black text-xs uppercase tracking-wider" style="width: 150px;">
-                                        Time Stopped
+                                        Shift Out
                                     </th>
                                 </tr>
                             </thead>
@@ -2251,6 +2353,13 @@
                 </div>
                 <div class="space-y-4">
                     ${dayBlocksHtml}
+                </div>
+                <!-- Add Employee Row Inline Button for Vertical View -->
+                <div class="mt-8 flex justify-center">
+                    <button id="add-employee-inline-btn-vertical" class="flex items-center space-x-2 px-6 py-3 text-sm font-bold uppercase tracking-wider text-gray-500 hover:text-blue-600 bg-white hover:bg-blue-50 border-2 border-dashed border-gray-300 hover:border-blue-300 rounded-xl transition-all cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                        <span>Add New Employee Row</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -2373,7 +2482,7 @@
                 return;
             }
             
-            const addEmployeeBtn = target.closest('#add-employee-inline-btn');
+            const addEmployeeBtn = target.closest('#add-employee-inline-btn') || target.closest('#add-employee-inline-btn-vertical');
             if (addEmployeeBtn) {
                 const newEmpId = `emp${Date.now()}`;
                 const newEmp = {
@@ -2388,10 +2497,15 @@
                 renderSchedule();
                 
                 setTimeout(() => {
-                    const newInput = container.querySelector(`.employee-inline-name[data-emp-id="${newEmpId}"]`);
-                    if (newInput) {
-                        newInput.focus();
-                        newInput.select();
+                    if (app.layoutOrientation !== 'vertical') {
+                        const newInput = container.querySelector(`.employee-inline-name[data-emp-id="${newEmpId}"]`);
+                        if (newInput) {
+                            newInput.focus();
+                            newInput.select();
+                        }
+                    } else {
+                        // In vertical view, we might want to jump to Setup or just show toast
+                        showToast("Employee Added", "Added 'New Employee'. You can now set their shifts.", "success");
                     }
                 }, 50);
                 return;
@@ -2895,7 +3009,52 @@
         const yearlySheet = XLSX.utils.aoa_to_sheet(yearlyData);
         yearlySheet['!cols'] = [{wch:25},...Array(12).fill({wch:8}),{wch:15}];
         XLSX.utils.book_append_sheet(wb, yearlySheet, 'Yearly Overview');
-        XLSX.writeFile(wb, `Team_Leave_Tracker_${year}.xlsx`);
+
+        // ADDED: Full App State Sheet for Round-Trip
+        const stateData = [['App State JSON'], [JSON.stringify(app)]];
+        const stateSheet = XLSX.utils.aoa_to_sheet(stateData);
+        XLSX.utils.book_append_sheet(wb, stateSheet, 'APP_STATE_DO_NOT_EDIT');
+
+        XLSX.writeFile(wb, `Team_Schedule_Tracker_${year}.xlsx`);
+    }
+
+    function importFromExcel(file) {
+        if (typeof XLSX === 'undefined') { alert("Could not import data. The required library is missing."); return; }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                // Try to find the hidden state sheet first
+                const stateSheet = workbook.Sheets['APP_STATE_DO_NOT_EDIT'];
+                if (stateSheet) {
+                    const jsonStr = stateSheet['A2'] ? stateSheet['A2'].v : null;
+                    if (jsonStr) {
+                        const loadedApp = JSON.parse(jsonStr);
+                        // Validation: Check if it looks like our app state
+                        if (loadedApp.employees && Array.isArray(loadedApp.employees)) {
+                            app = { ...app, ...loadedApp };
+                            // Re-instantiate dates
+                            app.dailyCalendarDate = new Date(app.dailyCalendarDate);
+                            app.monthlyCalendarDate = new Date(app.monthlyCalendarDate);
+                            saveState();
+                            render();
+                            showToast("Import Success", "Data fully restored from Excel file.", "success");
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback: If no state sheet, we could try to parse the other sheets,
+                // but that's much more complex and error-prone.
+                alert("This Excel file does not appear to contain valid Team Schedule backup data.");
+            } catch (err) {
+                console.error("Excel Import Error:", err);
+                alert("Error reading Excel file. Make sure it's a valid .xlsx file exported from this app.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
     }
 
     function toggleSidebar(collapsed) {
@@ -2905,12 +3064,14 @@
         const sidebar = document.getElementById('sidebar');
         const expandBtn = document.getElementById('sidebar-expand-btn');
         const mainViewport = document.getElementById('main-content-viewport');
+        const overlay = document.getElementById('sidebar-overlay');
         
         if (sidebar && expandBtn) {
             if (app.sidebarCollapsed) {
                 sidebar.classList.add('w-0', 'p-0', 'border-r-0');
                 sidebar.classList.remove('w-64', 'p-4', 'border-r');
                 expandBtn.classList.remove('hidden');
+                if (overlay) overlay.classList.add('hidden');
                 if (mainViewport) {
                     mainViewport.classList.add('pl-16');
                 }
@@ -2918,6 +3079,7 @@
                 sidebar.classList.add('w-64', 'p-4', 'border-r');
                 sidebar.classList.remove('w-0', 'p-0', 'border-r-0');
                 expandBtn.classList.add('hidden');
+                if (overlay && window.innerWidth < 768) overlay.classList.remove('hidden');
                 if (mainViewport) {
                     mainViewport.classList.remove('pl-16');
                 }
@@ -2935,15 +3097,23 @@
 
         const expandBtn = document.getElementById('sidebar-expand-btn');
         const collapseBtn = document.getElementById('sidebar-collapse-btn');
+        const overlay = document.getElementById('sidebar-overlay');
         if (expandBtn) expandBtn.addEventListener('click', () => toggleSidebar(false));
         if (collapseBtn) collapseBtn.addEventListener('click', () => toggleSidebar(true));
+        if (overlay) overlay.addEventListener('click', () => toggleSidebar(true));
 
-        navItems.forEach(item => item.addEventListener('click', () => { app.activeTab = item.dataset.tab; saveState(); render(); }));
+        navItems.forEach(item => item.addEventListener('click', () => {
+            app.activeTab = item.dataset.tab;
+            saveState();
+            render();
+            if (window.innerWidth < 768) {
+                toggleSidebar(true);
+            }
+        }));
         document.getElementById('modal-close-btn').addEventListener('click', closeEditModal);
         modal.addEventListener('click', (e) => { if (e.target === modal) closeEditModal(); });
         render();
     });
     </script>
-<script type="module" src="/index.tsx"></script>
 </body>
 </html>
