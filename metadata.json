@@ -1,6 +1,0 @@
-{
-  "name": "Team Leave & Schedule Tracker",
-  "description": "An interactive web application to track employee leaves, manage shift schedules, calculate coverage statistics, and visualize team availability with an elegant Excel-style interface.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
