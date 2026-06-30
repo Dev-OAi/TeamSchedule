@@ -265,7 +265,9 @@
         defaultShiftOut: '17:00',
         defaultBreakMins: 45,
         defaultShiftPreset: 'standard',
-        offRowColor: '#ffffff'
+        offRowColor: '#ffffff',
+        showSaturday: true,
+        showSunday: true
     };
 
     // --- DOM ELEMENTS ---
@@ -318,8 +320,15 @@
                     defaultShiftOut: '17:00',
                     defaultBreakMins: 45,
                     defaultShiftPreset: 'standard',
+                    showSaturday: true,
+                    showSunday: true,
                     ...parsedData
                 };
+                
+                if (parsedData.showWeekend !== undefined) {
+                    if (parsedData.showSaturday === undefined) defaultState.showSaturday = parsedData.showWeekend;
+                    if (parsedData.showSunday === undefined) defaultState.showSunday = parsedData.showWeekend;
+                }
                 
                 app = defaultState;
                 
@@ -1103,6 +1112,19 @@
                                     </select>
                                 </div>
                                 <div class="border-t border-gray-100 pt-4 mt-4 space-y-3">
+                                    <h3 class="text-xs font-black text-gray-500 uppercase tracking-wider">Schedule Columns Visibility</h3>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div class="flex items-center space-x-2 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                                            <input type="checkbox" id="show-saturday-toggle" ${app.showSaturday !== false ? 'checked' : ''} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" />
+                                            <label for="show-saturday-toggle" class="text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer select-none">Show Saturday Column</label>
+                                        </div>
+                                        <div class="flex items-center space-x-2 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                                            <input type="checkbox" id="show-sunday-toggle" ${app.showSunday !== false ? 'checked' : ''} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" />
+                                            <label for="show-sunday-toggle" class="text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer select-none">Show Sunday Column</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-100 pt-4 mt-4 space-y-3">
                                     <h3 class="text-xs font-black text-gray-500 uppercase tracking-wider">Highlight Colors</h3>
                                     <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Used in Vertical Layout to spot branch shifts & OFF days at a glance.</p>
                                     
@@ -1323,6 +1345,12 @@
                 if (openColorInput) app.openBranchColor = openColorInput.value;
                 if (closeColorInput) app.closeBranchColor = closeColorInput.value;
                 if (offColorInput) app.offRowColor = offColorInput.value;
+                
+                const showSaturdayToggle = document.getElementById('show-saturday-toggle');
+                if (showSaturdayToggle) app.showSaturday = showSaturdayToggle.checked;
+                
+                const showSundayToggle = document.getElementById('show-sunday-toggle');
+                if (showSundayToggle) app.showSunday = showSundayToggle.checked;
                 
                 saveState();
                 showToast('Success', 'Default shift and highlight color settings saved!', 'success');
@@ -1578,7 +1606,9 @@
         }
         
         const weekSchedules = getWeeklySchedule(app.scheduleWeekDate);
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        if (app.showSaturday !== false) days.push('Sat');
+        if (app.showSunday !== false) days.push('Sun');
         
         if (!app.scheduleViewMode) {
             app.scheduleViewMode = 'editor';
@@ -1847,10 +1877,13 @@
             if (!empSched) return '';
             
             let empTotalHrs = 0;
+            ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(d => {
+                const dayData = empSched.days[d] || { active: false, type: 'OFF', location: '', shiftIn: app.defaultShiftIn || '08:30', shiftOut: app.defaultShiftOut || '17:00', breakMins: app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45 };
+                empTotalHrs += getShiftHours(dayData);
+            });
             const dayCellsHtml = days.map(day => {
                 const dayData = empSched.days[day] || { active: false, type: 'OFF', location: '', shiftIn: app.defaultShiftIn || '08:30', shiftOut: app.defaultShiftOut || '17:00', breakMins: app.defaultBreakMins !== undefined ? app.defaultBreakMins : 45 };
                 const dayHrs = getShiftHours(dayData);
-                empTotalHrs += dayHrs;
                 
                 let cellClass = '';
                 let cellContent = '';
@@ -2403,7 +2436,14 @@
         if (typeof XLSX === 'undefined') { alert("Could not export data. The required library is missing."); return; }
         const wb = XLSX.utils.book_new();
         
-        const headerRow = ['Employee', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Total Hours'];
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        if (app.showSaturday !== false) days.push('Sat');
+        if (app.showSunday !== false) days.push('Sun');
+            
+        const dayNames = {
+            'Mon': 'Monday', 'Tue': 'Tuesday', 'Wed': 'Wednesday', 'Thu': 'Thursday', 'Fri': 'Friday', 'Sat': 'Saturday', 'Sun': 'Sunday'
+        };
+        const headerRow = ['Employee', ...days.map(d => dayNames[d]), 'Total Hours'];
         const rows = [
             ['Team Schedule - Week of ' + app.scheduleWeekDate],
             [],
@@ -2415,7 +2455,6 @@
             const empSched = currentWeekSchedules.find(s => s.employeeId === emp.id);
             const rowData = [emp.name];
             let rowTotal = 0;
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             days.forEach(day => {
                 if (empSched && empSched.days[day] && empSched.days[day].active) {
                     const dayData = empSched.days[day];
@@ -2436,7 +2475,7 @@
         });
         
         const ws = XLSX.utils.aoa_to_sheet(rows);
-        ws['!cols'] = [{wch:20}, {wch:28}, {wch:28}, {wch:28}, {wch:28}, {wch:28}, {wch:28}, {wch:28}, {wch:15}];
+        ws['!cols'] = [{wch:20}, ...days.map(() => ({wch:28})), {wch:15}];
         XLSX.utils.book_append_sheet(wb, ws, 'Weekly Schedule');
         XLSX.writeFile(wb, `Team_Schedule_Week_${app.scheduleWeekDate}.xlsx`);
     }
