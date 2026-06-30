@@ -257,9 +257,9 @@
             { id: 'other', name: 'Other', durationHHMM: '08:00', color: '#10b981' },
         ],
         employees: [
-            { id: 'emp1', name: 'Alice Smith', role: 'BM', cardColor: 'white', vacationAllotment: 15 },
-            { id: 'emp2', name: 'Bob Johnson', role: 'ABM', cardColor: 'white', vacationAllotment: 20 },
-            { id: 'emp3', name: 'Charlie Brown', role: 'BOC', cardColor: 'white', vacationAllotment: 15 },
+            { id: 'emp1', name: 'Alice Smith', role: 'Title 1', cardColor: 'white', vacationAllotment: 15 },
+            { id: 'emp2', name: 'Bob Johnson', role: 'Title 2', cardColor: 'white', vacationAllotment: 20 },
+            { id: 'emp3', name: 'Charlie Brown', role: 'Title 3', cardColor: 'white', vacationAllotment: 15 },
         ],
         logEntries: [
             { id: 'log1', date: '2024-01-15', employeeId: 'emp1', leaveTypeId: 'vacation', duration: 1, notes: 'Pre-approved' },
@@ -652,13 +652,18 @@
         mainContent.innerHTML = summaryHtml + generateDailyCalendarHTML() + generateMonthlyCalendarHTML() + generateYearlyGridViewHTML(app.currentYear, true);
 
         // --- Event Listeners for Dashboard ---
-        mainContent.querySelector('#year-select').addEventListener('change', (e) => { app.currentYear = parseInt(e.target.value, 10); saveState(); renderDashboard(); });
-        mainContent.querySelector('#save-btn').addEventListener('click', () => {
+        const yearSelect = mainContent.querySelector('#year-select');
+        if (yearSelect) yearSelect.addEventListener('change', (e) => { app.currentYear = parseInt(e.target.value, 10); saveState(); renderDashboard(); });
+
+        const saveBtn = mainContent.querySelector('#save-btn');
+        if (saveBtn) saveBtn.addEventListener('click', () => {
             const dataStr = JSON.stringify(app, null, 2); const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob); const a = document.createElement('a');
             a.href = url; a.download = 'leave-tracker-data.json'; a.click(); URL.revokeObjectURL(url);
         });
-        mainContent.querySelector('#load-data-input').addEventListener('change', (e) => {
+
+        const loadDataInput = mainContent.querySelector('#load-data-input');
+        if (loadDataInput) loadDataInput.addEventListener('change', (e) => {
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -672,6 +677,7 @@
             };
             reader.readAsText(file);
         });
+
         const downloadBtn = mainContent.querySelector('#download-btn');
         if (downloadBtn) downloadBtn.addEventListener('click', () => { exportToSpreadsheet(app.employees, app.logEntries, app.leaveTypes, app.currentYear); });
 
@@ -685,6 +691,22 @@
                 }
             });
         }
+
+        const prevDayBtn = mainContent.querySelector('#prev-day');
+        if (prevDayBtn) prevDayBtn.addEventListener('click', () => { app.dailyCalendarDate.setDate(app.dailyCalendarDate.getDate() - 1); saveState(); renderDashboard(); });
+
+        const nextDayBtn = mainContent.querySelector('#next-day');
+        if (nextDayBtn) nextDayBtn.addEventListener('click', () => { app.dailyCalendarDate.setDate(app.dailyCalendarDate.getDate() + 1); saveState(); renderDashboard(); });
+
+        const prevMonthBtn = mainContent.querySelector('#prev-month');
+        if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => { app.monthlyCalendarDate.setMonth(app.monthlyCalendarDate.getMonth() - 1); saveState(); renderDashboard(); });
+
+        const nextMonthBtn = mainContent.querySelector('#next-month');
+        if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => { app.monthlyCalendarDate.setMonth(app.monthlyCalendarDate.getMonth() + 1); saveState(); renderDashboard(); });
+
+        const conflictToggle = mainContent.querySelector('#conflict-toggle');
+        if (conflictToggle) conflictToggle.addEventListener('change', (e) => { app.highlightConflicts = e.target.checked; saveState(); renderDashboard(); });
+
         mainContent.querySelectorAll('.sortable').forEach(header => {
             header.addEventListener('click', () => {
                 const key = header.dataset.sortKey;
@@ -693,11 +715,6 @@
                 saveState(); renderDashboard();
             });
         });
-        mainContent.querySelector('#prev-day').addEventListener('click', () => { app.dailyCalendarDate.setDate(app.dailyCalendarDate.getDate() - 1); saveState(); renderDashboard(); });
-        mainContent.querySelector('#next-day').addEventListener('click', () => { app.dailyCalendarDate.setDate(app.dailyCalendarDate.getDate() + 1); saveState(); renderDashboard(); });
-        mainContent.querySelector('#prev-month').addEventListener('click', () => { app.monthlyCalendarDate.setMonth(app.monthlyCalendarDate.getMonth() - 1); saveState(); renderDashboard(); });
-        mainContent.querySelector('#next-month').addEventListener('click', () => { app.monthlyCalendarDate.setMonth(app.monthlyCalendarDate.getMonth() + 1); saveState(); renderDashboard(); });
-        mainContent.querySelector('#conflict-toggle').addEventListener('change', (e) => { app.highlightConflicts = e.target.checked; saveState(); renderDashboard(); });
         mainContent.querySelectorAll('.edit-daily-btn').forEach(btn => btn.addEventListener('click', (e) => {
             const { employeeId, dateStr } = e.currentTarget.dataset;
             openEditModal(employeeId, dateStr);
@@ -1180,7 +1197,8 @@
             e.preventDefault(); 
             const formData = new FormData(e.target);
             const name = formData.get('name').trim();
-            const role = formData.get('role').trim() || 'FSA';
+            const nextTitleNum = app.employees.length + 1;
+            const role = formData.get('role').trim() || `Title ${nextTitleNum}`;
             const cardColor = formData.get('cardColor');
             const vacationAllotment = parseInt(formData.get('vacationAllotment'), 10) || 15;
             
@@ -2072,13 +2090,14 @@
                                    </div>
                                </div>
                                <div class="mt-1">
-                                   <input type="text" class="employee-inline-role text-[11px] font-normal text-gray-500 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white px-1 py-0.5 rounded outline-none w-full transition-all uppercase tracking-tight" value="${emp.role || ''}" data-emp-id="${emp.id}" placeholder="Role/Title" />
+                                   <input type="text" class="employee-inline-role text-[10px] font-normal text-gray-400 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white px-1 py-0.5 rounded outline-none w-full transition-all uppercase tracking-tight" value="${emp.role || ''}" data-emp-id="${emp.id}" placeholder="Role/Title" />
                                </div>
                                <div class="flex justify-between items-center mt-1">
-                                   <button class="row-delete-inline-btn text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-all opacity-0 group-hover:opacity-100 cursor-pointer" data-emp-id="${emp.id}" title="Delete Row">
-                                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                   <button class="row-delete-inline-btn flex items-center space-x-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-400 hover:text-red-600 bg-transparent hover:bg-red-50 border border-dashed border-red-200 hover:border-red-400 rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100" data-emp-id="${emp.id}" title="Delete Row">
+                                       <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                       <span>Remove Row</span>
                                    </button>
-                                   <div class="text-right text-[11px] font-normal text-gray-400 mr-1">${weeklyTotalFormatted}</div>
+                                   <div class="text-right text-[10px] font-normal text-gray-400 mr-1">${weeklyTotalFormatted}</div>
                                </div>
                           </div>
                       </td>
@@ -2113,8 +2132,8 @@
                              <!-- Add Employee Row Inline Button -->
                              <tr class="bg-gray-100 hover:bg-gray-100/90 transition-all">
                                  <td class="p-2 sticky-col bg-gray-100">
-                                     <button id="add-employee-inline-btn" class="flex items-center space-x-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-blue-600 bg-transparent hover:bg-blue-50/50 border border-dashed border-gray-300 hover:border-blue-300/80 rounded-md transition-all cursor-pointer opacity-60 hover:opacity-100">
-                                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                                     <button id="add-employee-inline-btn" class="flex items-center space-x-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-400 hover:text-blue-600 bg-transparent hover:bg-blue-50/50 border border-dashed border-gray-300 hover:border-blue-300/80 rounded transition-all cursor-pointer opacity-60 hover:opacity-100">
+                                         <svg class="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
                                          <span>Add Row</span>
                                      </button>
                                  </td>
@@ -2258,8 +2277,9 @@
                             <div class="flex flex-col h-full justify-between">
                                 <div class="flex justify-between items-start">
                                     <span class="font-black text-sm text-[#434343]">${emp.name}</span>
-                                    <button class="row-delete-inline-btn text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-all opacity-0 group-hover:opacity-100 cursor-pointer" data-emp-id="${emp.id}" title="Delete Row">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                    <button class="row-delete-inline-btn flex items-center space-x-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-red-400 hover:text-red-600 bg-transparent hover:bg-red-50 border border-dashed border-red-200 hover:border-red-400 rounded transition-all opacity-0 group-hover:opacity-100 cursor-pointer" data-emp-id="${emp.id}" title="Delete Row">
+                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                        <span>Remove Row</span>
                                     </button>
                                 </div>
                                 <div class="flex justify-between items-center text-[10px] text-gray-500 font-normal uppercase mt-0.5 tracking-tight">
@@ -2356,8 +2376,8 @@
                 </div>
                 <!-- Add Employee Row Inline Button for Vertical View -->
                 <div class="mt-8 flex justify-center">
-                    <button id="add-employee-inline-btn-vertical" class="flex items-center space-x-2 px-6 py-3 text-sm font-bold uppercase tracking-wider text-gray-500 hover:text-blue-600 bg-white hover:bg-blue-50 border-2 border-dashed border-gray-300 hover:border-blue-300 rounded-xl transition-all cursor-pointer">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                    <button id="add-employee-inline-btn-vertical" class="flex items-center space-x-1 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-gray-500 hover:text-blue-600 bg-white hover:bg-blue-50 border-2 border-dashed border-gray-300 hover:border-blue-300 rounded-lg transition-all cursor-pointer">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
                         <span>Add New Employee Row</span>
                     </button>
                 </div>
@@ -2485,10 +2505,11 @@
             const addEmployeeBtn = target.closest('#add-employee-inline-btn') || target.closest('#add-employee-inline-btn-vertical');
             if (addEmployeeBtn) {
                 const newEmpId = `emp${Date.now()}`;
+                const nextTitleNum = app.employees.length + 1;
                 const newEmp = {
                     id: newEmpId,
                     name: 'New Employee',
-                    role: 'FSA',
+                    role: `Title ${nextTitleNum}`,
                     cardColor: 'white',
                     vacationAllotment: 15
                 };
