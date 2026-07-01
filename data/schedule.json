@@ -1,0 +1,17 @@
+{
+  "employees": [
+    { "id": "emp1", "name": "Alice Smith", "role": "Title 1", "cardColor": "white", "vacationAllotment": 15 },
+    { "id": "emp2", "name": "Bob Johnson", "role": "Title 2", "cardColor": "white", "vacationAllotment": 20 },
+    { "id": "emp3", "name": "Charlie Brown", "role": "Title 3", "cardColor": "white", "vacationAllotment": 15 }
+  ],
+  "logEntries": [],
+  "schedules": {},
+  "leaveTypes": [
+    { "id": "vacation", "name": "Vacation", "durationHHMM": "08:00", "color": "#3b82f6" },
+    { "id": "sick", "name": "Sick Day", "durationHHMM": "08:00", "color": "#ef4444" },
+    { "id": "personal", "name": "Personal Day", "durationHHMM": "08:00", "color": "#f59e0b" },
+    { "id": "jury", "name": "Jury Duty", "durationHHMM": "08:00", "color": "#8b5cf6" },
+    { "id": "bereavement", "name": "Bereavement", "durationHHMM": "08:00", "color": "#6b7280" },
+    { "id": "other", "name": "Other", "durationHHMM": "08:00", "color": "#10b981" }
+  ]
+}
