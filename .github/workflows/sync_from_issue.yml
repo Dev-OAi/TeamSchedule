@@ -1,0 +1,47 @@
+name: Sync Data from Issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  sync:
+    if: contains(github.event.issue.body, '---DATA_SYNC_START---') || contains(github.event.issue.body, '---EXCEL_SYNC_TRIGGER---')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync from App Payload
+        if: contains(github.event.issue.body, '---DATA_SYNC_START---')
+        id: extract
+        run: |
+          BODY="${{ github.event.issue.body }}"
+          PAYLOAD=$(echo "$BODY" | sed -n '/---DATA_SYNC_START---/,/---DATA_SYNC_END---/p' | grep -v '---DATA_SYNC_')
+          echo "$PAYLOAD" > data/schedule.json
+
+      - name: Sync from External Excel
+        if: contains(github.event.issue.body, '---EXCEL_SYNC_TRIGGER---')
+        run: |
+          BODY="${{ github.event.issue.body }}"
+          URL=$(echo "$BODY" | grep "URL: " | cut -d ' ' -f 2-)
+          npm install xlsx
+          node js/sync-excel.js "$URL"
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add data/schedule.json
+          git commit -m "Update schedule from Issue #${{ github.event.issue.number }}"
+          git push
+
+      - name: Close and Delete Issue
+        run: |
+          gh issue close ${{ github.event.issue.number }} --reason "completed"
+          # Deleting an issue requires admin/repo owner token, so we just close it.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
