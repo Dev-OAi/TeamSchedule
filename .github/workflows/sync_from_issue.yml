@@ -18,16 +18,18 @@ jobs:
       - name: Sync from App Payload
         if: contains(github.event.issue.body, '---DATA_SYNC_START---')
         id: extract
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          BODY="${{ github.event.issue.body }}"
-          PAYLOAD=$(echo "$BODY" | sed -n '/---DATA_SYNC_START---/,/---DATA_SYNC_END---/p' | grep -v '---DATA_SYNC_')
+          PAYLOAD=$(echo "$ISSUE_BODY" | sed -n '/---DATA_SYNC_START---/,/---DATA_SYNC_END---/p' | grep -v '---DATA_SYNC_')
           echo "$PAYLOAD" > data/schedule.json
 
       - name: Sync from External Excel
         if: contains(github.event.issue.body, '---EXCEL_SYNC_TRIGGER---')
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          BODY="${{ github.event.issue.body }}"
-          URL=$(echo "$BODY" | grep "URL: " | cut -d ' ' -f 2-)
+          URL=$(echo "$ISSUE_BODY" | grep "URL: " | cut -d ' ' -f 2-)
           npm install xlsx
           node js/sync-excel.js "$URL"
 

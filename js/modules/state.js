@@ -57,7 +57,8 @@ export function saveState() {
 export async function loadState() {
         // Try to load from cloud first
         try {
-            const response = await fetch('data/schedule.json');
+            // Add cache-busting parameter to ensure we get the latest manual updates
+            const response = await fetch(`data/schedule.json?t=${Date.now()}`);
             if (response.ok) {
                 const cloudData = await response.json();
                 console.log("Loaded data from cloud.");
@@ -120,6 +121,11 @@ function applyDataToApp(parsedData) {
                 if (parsedData.showWeekend !== undefined) {
                     if (parsedData.showSaturday === undefined) defaultState.showSaturday = parsedData.showWeekend;
                     if (parsedData.showSunday === undefined) defaultState.showSunday = parsedData.showWeekend;
+                }
+
+                // Clear existing volatile state to ensure cloud data is the source of truth
+                for (let key in app) {
+                    if (app.hasOwnProperty(key)) delete app[key];
                 }
 
                 Object.assign(app, defaultState);
