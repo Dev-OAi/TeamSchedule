@@ -465,23 +465,40 @@ function renderSetup() {
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <button id="copy-sync-data-btn" class="flex items-center justify-center space-x-2 w-full bg-gray-800 text-white py-2.5 px-4 rounded-lg hover:bg-black font-bold shadow-md transition">
-                                ${ICONS.copy} <span>Copy Data to Clipboard</span>
+                            <button id="save-to-cloud-btn" class="flex items-center justify-center space-x-2 w-full bg-emerald-600 text-white py-2.5 px-4 rounded-lg hover:bg-emerald-700 font-bold shadow-md transition ${!app.githubRepoUrl ? 'opacity-50 pointer-events-none' : ''}">
+                                ${ICONS.save || ''} <span>🚀 Save to Cloud (No Copy-Paste)</span>
                             </button>
-
-                            <a id="github-edit-link" href="${app.githubRepoUrl ? `${app.githubRepoUrl}/edit/main/data/schedule.json` : '#'}" target="_blank" class="flex items-center justify-center space-x-2 w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 font-bold shadow-md transition text-center ${!app.githubRepoUrl ? 'opacity-50 pointer-events-none' : ''}">
-                                ${ICONS.externalLink || ''} <span>Open GitHub Editor</span>
-                            </a>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="copy-sync-data-btn" class="flex items-center justify-center space-x-2 bg-gray-800 text-white py-2 px-3 rounded-lg hover:bg-black font-bold shadow-md transition text-[11px]">
+                                    ${ICONS.copy} <span>Manual Copy</span>
+                                </button>
+                                <a id="github-edit-link" href="${app.githubRepoUrl ? `${app.githubRepoUrl}/edit/main/data/schedule.json` : '#'}" target="_blank" class="flex items-center justify-center space-x-2 bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 font-bold shadow-md transition text-center text-[11px] ${!app.githubRepoUrl ? 'opacity-50 pointer-events-none' : ''}">
+                                    ${ICONS.externalLink || ''} <span>GitHub Editor</span>
+                                </a>
+                            </div>
                         </div>
 
                         <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
                             <h4 class="text-xs font-bold text-blue-800 uppercase mb-1">Workflow:</h4>
                             <ol class="text-[11px] text-blue-700 space-y-1 list-decimal list-inside">
-                                <li>Click "Copy Data"</li>
-                                <li>Click "Open GitHub Editor"</li>
-                                <li>Select all text in GitHub, paste the new data</li>
-                                <li>Commit changes (button at top right in GitHub)</li>
+                                <li>Click "Save to Cloud"</li>
+                                <li>Click "Submit New Issue" on the GitHub page that opens</li>
+                                <li>GitHub will automatically update the data file and close the issue</li>
                             </ol>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-100">
+                            <h3 class="text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">External Excel Sync</h3>
+                            <p class="text-xs text-gray-500 mb-3">Optionally, provide a direct download link to an Excel file (OneDrive/Dropbox) to sync from external source.</p>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Excel Download URL</label>
+                                    <input type="text" id="excel-sync-url" value="${app.excelSyncUrl || ''}" placeholder="https://onedrive.live.com/download?..." class="w-full p-2 border border-gray-300 rounded-lg text-xs font-mono">
+                                </div>
+                                <button id="trigger-excel-sync-btn" class="w-full bg-blue-50 text-blue-600 py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest border border-blue-200 hover:bg-blue-100 transition shadow-sm ${!app.excelSyncUrl ? 'opacity-50 pointer-events-none' : ''}">
+                                    Sync Now from Excel
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ` : `
@@ -855,13 +872,51 @@ function renderSetup() {
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
                 const dataToCopy = JSON.stringify(app, null, 2);
+
                 navigator.clipboard.writeText(dataToCopy).then(() => {
-                    showToast('Copied!', 'Data copied to clipboard. Now open the GitHub editor.', 'success');
+                    showToast('Copied!', 'Application data copied to clipboard.', 'success');
                 }).catch(err => {
                     console.error('Failed to copy: ', err);
                     showToast('Error', 'Failed to copy to clipboard.', 'error');
                 });
             });
+        }
+
+        const saveToCloudBtn = document.getElementById('save-to-cloud-btn');
+        if (saveToCloudBtn) {
+            saveToCloudBtn.onclick = () => {
+                const payload = JSON.stringify(app, null, 2);
+
+                const issueBody = encodeURIComponent(`---DATA_SYNC_START---\n${payload}\n---DATA_SYNC_END---`);
+                const issueTitle = encodeURIComponent(`Schedule Update: ${new Date().toLocaleString()}`);
+                const url = `${app.githubRepoUrl}/issues/new?title=${issueTitle}&body=${issueBody}`;
+
+                window.open(url, '_blank');
+                showToast('GitHub Opened', 'Please click "Submit New Issue" on GitHub to finish the update.', 'info');
+            };
+        }
+
+        const excelSyncUrlInput = document.getElementById('excel-sync-url');
+        if (excelSyncUrlInput) {
+            excelSyncUrlInput.addEventListener('change', (e) => {
+                app.excelSyncUrl = e.target.value.trim();
+                saveState();
+                renderSetup();
+            });
+        }
+
+        const triggerExcelSyncBtn = document.getElementById('trigger-excel-sync-btn');
+        if (triggerExcelSyncBtn) {
+            triggerExcelSyncBtn.onclick = () => {
+                // To trigger a GitHub Action via Issue (without API token),
+                // we can open a special issue that tells the action to fetch from Excel.
+                const issueBody = encodeURIComponent(`---EXCEL_SYNC_TRIGGER---\nURL: ${app.excelSyncUrl}\n---END---`);
+                const issueTitle = encodeURIComponent(`Sync from Excel: ${new Date().toLocaleString()}`);
+                const url = `${app.githubRepoUrl}/issues/new?title=${issueTitle}&body=${issueBody}`;
+
+                window.open(url, '_blank');
+                showToast('Sync Triggered', 'Click "Submit New Issue" to start the Excel sync process.', 'info');
+            };
         }
     }
 
@@ -971,9 +1026,45 @@ function toggleSidebar(collapsed) {
     }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadState();
+    const loginOverlay = document.getElementById('login-overlay');
+    const loginForm = document.getElementById('login-form');
+    const loginPass = document.getElementById('login-password');
+    const loginErr = document.getElementById('login-error');
+    const appContainer = document.getElementById('app-container');
 
-    // Hide sidebar by default on load
+    // Check if already "logged in" for this session
+    const sessionKey = sessionStorage.getItem('vly_auth');
+    if (sessionKey === '%%APP_PASSWORD%%') {
+        proceedToApp();
+    }
+
+    loginForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const pass = loginPass.value.toUpperCase();
+        if (pass === '%%APP_PASSWORD%%') {
+            sessionStorage.setItem('vly_auth', '%%APP_PASSWORD%%');
+            proceedToApp();
+        } else {
+            loginErr.classList.remove('hidden');
+            loginPass.value = '';
+            loginPass.focus();
+        }
+    };
+
+    async function proceedToApp() {
+        await loadState();
+
+        loginOverlay.classList.add('opacity-0');
+        setTimeout(() => {
+            loginOverlay.style.display = 'none';
+            appContainer.classList.remove('opacity-0', 'pointer-events-none');
+        }, 500);
+
+        // Standard App Init
+        initApp();
+    }
+
+    function initApp() {
     app.sidebarCollapsed = true;
     toggleSidebar(true);
 
@@ -994,5 +1085,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }));
     document.getElementById('modal-close-btn').addEventListener('click', closeEditModal);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeEditModal(); });
-    render();
+        render();
+    }
 });

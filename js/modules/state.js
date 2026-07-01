@@ -1,4 +1,5 @@
 import { INITIAL_LEAVE_TYPES, INITIAL_EMPLOYEES } from './config.js';
+import { isValidJSON } from './utils.js';
 
 export let app = {
         activeTab: 'Schedule',
@@ -61,7 +62,7 @@ export async function loadState() {
                 const cloudData = await response.json();
                 console.log("Loaded data from cloud.");
                 applyDataToApp(cloudData);
-                return;
+                return true;
             }
         } catch (e) {
             console.warn("Could not load data from cloud, falling back to local storage.", e);
@@ -75,11 +76,13 @@ export async function loadState() {
             try {
                 const parsedData = JSON.parse(savedData);
                 applyDataToApp(parsedData);
+                return true;
             } catch (e) {
                 console.error("Failed to load saved data. Using default data.", e);
                 localStorage.removeItem('leaveTrackerData_v4');
             }
         }
+        return false;
     }
 
 function applyDataToApp(parsedData) {

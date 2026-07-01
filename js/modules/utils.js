@@ -201,3 +201,12 @@ export function format12Hour(timeStr) {
     hour = hour ? hour : 12;
     return `${hour}:${minStr} ${ampm}`;
 }
+
+export function isValidJSON(str) {
+    try {
+        JSON.parse(str);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
