@@ -23,13 +23,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Inject Password
+      - name: Inject Build Config
         run: |
-          # Use a secret for the password. User should set APP_PASSWORD secret to VLY
-          # Fallback to VLY if secret is not set (for convenience, though less secure)
-          PASSWORD="${{ secrets.APP_PASSWORD }}"
-          if [ -z "$PASSWORD" ]; then PASSWORD="VLY"; fi
-          sed -i "s/%%APP_PASSWORD%%/$PASSWORD/g" js/app.js
+          BUILD_PASS="${{ secrets.APP_PASSWORD }}"
+          sed -i "s/%%APP_PASSWORD%%/$BUILD_PASS/g" js/app.js
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
