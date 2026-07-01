@@ -84,8 +84,8 @@
         "employeeId": "emp1",
         "days": {
           "Mon": {
-            "active": true,
-            "type": "VACATION",
+            "active": false,
+            "type": "OFF",
             "location": "",
             "shiftIn": "",
             "shiftOut": "",
