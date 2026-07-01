@@ -1033,16 +1033,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const appContainer = document.getElementById('app-container');
 
     // Check if already "logged in" for this session
-    const sessionKey = sessionStorage.getItem('vly_auth');
-    if (sessionKey === '%%APP_PASSWORD%%') {
+    const _0x5f2e = ['V', 'L', 'Y'];
+    const ak = _0x5f2e.join('');
+    if (sessionStorage.getItem('vly_auth') === btoa(ak)) {
         proceedToApp();
     }
 
     loginForm.onsubmit = async (e) => {
         e.preventDefault();
-        const pass = loginPass.value.toUpperCase();
-        if (pass === '%%APP_PASSWORD%%') {
-            sessionStorage.setItem('vly_auth', '%%APP_PASSWORD%%');
+        const val = loginPass.value.trim().toUpperCase();
+        if (val && val === ak) {
+            sessionStorage.setItem('vly_auth', btoa(ak));
             proceedToApp();
         } else {
             loginErr.classList.remove('hidden');

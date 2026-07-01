@@ -23,10 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Inject Build Config
-        run: |
-          BUILD_PASS="${{ secrets.APP_PASSWORD }}"
-          sed -i "s/%%APP_PASSWORD%%/$BUILD_PASS/g" js/app.js
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
