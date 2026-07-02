@@ -6,6 +6,7 @@
     <title>Team Schedule</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-gray-100">
@@ -90,6 +91,7 @@
         </div>
     </div>
 
+    <!-- Schedule Edit Modal -->
     <!-- Schedule Edit Modal -->
     <div id="edit-schedule-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-60 overflow-y-auto h-full w-full justify-center items-center z-50">
         <div class="relative mx-auto p-6 border w-full max-w-md shadow-2xl rounded-2xl bg-white border-gray-100">
@@ -192,6 +194,73 @@
                     <button type="submit" class="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg text-sm font-black transition shadow-md">Apply Shift</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Share Schedule Modal -->
+    <div id="share-schedule-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-60 overflow-y-auto h-full w-full justify-center items-center z-50">
+        <div class="relative mx-auto p-6 border w-full max-w-md shadow-2xl rounded-2xl bg-white border-gray-100">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-100">
+                <div class="flex flex-col">
+                    <h3 class="text-xl font-extrabold text-gray-900 uppercase tracking-tight">Share Schedule</h3>
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mt-0.5">Export range of weeks</p>
+                </div>
+                <button id="share-modal-close-btn" class="text-gray-400 hover:text-gray-600 font-bold" aria-label="Close modal">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                </button>
+            </div>
+            <div class="space-y-4 pt-4">
+                <!-- Select Employees -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="block text-xs font-black text-gray-500 uppercase tracking-wider">Select Employees</label>
+                        <div class="space-x-2">
+                            <button id="share-select-all-emps" class="text-[10px] font-bold text-blue-600 uppercase">Select All</button>
+                            <button id="share-deselect-all-emps" class="text-[10px] font-bold text-gray-500 uppercase">Deselect All</button>
+                        </div>
+                    </div>
+                    <div id="share-employee-list" class="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2">
+                        <!-- Dynamic list -->
+                    </div>
+                </div>
+
+                <!-- Range Selector -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="share-start-week" class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Start Week</label>
+                        <input type="date" id="share-start-week" class="w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label for="share-end-week" class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">End Week</label>
+                        <input type="date" id="share-end-week" class="w-full p-2 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <!-- Export Format -->
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Export Format</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button data-format="image" class="share-format-btn flex flex-col items-center justify-center p-3 border-2 border-gray-100 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group">
+                            <svg class="w-6 h-6 text-gray-400 group-hover:text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-[10px] font-black uppercase text-gray-500 group-hover:text-blue-700">Picture</span>
+                        </button>
+                        <button data-format="ics" class="share-format-btn flex flex-col items-center justify-center p-3 border-2 border-gray-100 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group">
+                            <svg class="w-6 h-6 text-gray-400 group-hover:text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-[10px] font-black uppercase text-gray-500 group-hover:text-blue-700">Outlook</span>
+                        </button>
+                        <button data-format="excel" class="share-format-btn flex flex-col items-center justify-center p-3 border-2 border-gray-100 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group">
+                            <svg class="w-6 h-6 text-gray-400 group-hover:text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a2 2 0 00-2-2H5a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v8m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2z"></path></svg>
+                            <span class="text-[10px] font-black uppercase text-gray-500 group-hover:text-blue-700">Excel</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Final Actions -->
+                <div class="flex justify-end gap-2.5 pt-4 border-t border-gray-100">
+                    <button id="share-cancel-btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-bold transition">Cancel</button>
+                    <button id="share-confirm-btn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-black transition shadow-md uppercase tracking-widest">Generate Export</button>
+                </div>
+            </div>
         </div>
     </div>
 
