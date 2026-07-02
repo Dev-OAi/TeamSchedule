@@ -4,12 +4,12 @@ import {
     formatHoursToHHMMString, format12HourTime, getShiftHours,
     getEmployeeBgColor, getEmployeeTextClass, getMondayDateString,
     getWeekDisplayRange, format12Hour, calculateHours, formatBreakTime,
-    getContrastYIQ
+    getContrastYIQ, hhmmToHours
 } from './utils.js';
 import {
     renderPageHeader, renderEmptyState, showToast, showConfirm
 } from './ui-components.js';
-import { exportScheduleToSpreadsheet, exportScheduleToICS, exportToSpreadsheet, importFromExcel } from './exports.js';
+import { exportScheduleToSpreadsheet, exportScheduleToICS, exportToSpreadsheet, importFromExcel, openShareModal } from './exports.js';
 
 export function renderSchedule() {
         const downloadIcon = ICONS.download;
@@ -41,15 +41,29 @@ export function renderSchedule() {
             </div>
         `;
 
+        let viewScopeHtml = `
+            <div class="flex items-center bg-gray-200 p-1 rounded-lg">
+                <button id="view-type-daily" class="px-2.5 py-1 rounded-md text-[11px] font-black transition-all ${app.scheduleViewType === 'daily' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}" title="Daily Timeline View">D</button>
+                <button id="view-type-weekly" class="px-2.5 py-1 rounded-md text-[11px] font-black transition-all ${app.scheduleViewType === 'weekly' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}" title="Weekly Spreadsheet View">W</button>
+                <button id="view-type-monthly" class="px-2.5 py-1 rounded-md text-[11px] font-black transition-all ${app.scheduleViewType === 'monthly' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}" title="Monthly Calendar View">M</button>
+            </div>
+        `;
+
         let mainScheduleContent = '';
-        if (app.scheduleViewMode === 'editor') {
-            if (app.layoutOrientation === 'vertical') {
-                mainScheduleContent = renderScheduleVertical(weekSchedules, days);
-            } else {
-                mainScheduleContent = renderScheduleEditor(weekSchedules, days);
-            }
+        if (app.scheduleViewType === 'daily') {
+            mainScheduleContent = renderScheduleDaily(weekSchedules, days);
+        } else if (app.scheduleViewType === 'monthly') {
+            mainScheduleContent = renderScheduleMonthly();
         } else {
-            mainScheduleContent = renderScheduleCalendar(weekSchedules, days);
+            if (app.scheduleViewMode === 'editor') {
+                if (app.layoutOrientation === 'vertical') {
+                    mainScheduleContent = renderScheduleVertical(weekSchedules, days);
+                } else {
+                    mainScheduleContent = renderScheduleEditor(weekSchedules, days);
+                }
+            } else {
+                mainScheduleContent = renderScheduleCalendar(weekSchedules, days);
+            }
         }
 
         const mainContent = document.getElementById('main-content');
@@ -62,6 +76,7 @@ export function renderSchedule() {
 
                      </div>
                      <div class="flex flex-wrap items-center gap-2 md:gap-3">
+                         ${viewScopeHtml}
                          ${viewToggleHtml}
 
                          <!-- Compact Persistence Buttons -->
@@ -90,6 +105,11 @@ export function renderSchedule() {
                          <button id="export-ics-btn" class="flex items-center bg-blue-600 text-white py-1.5 md:py-2 px-3 md:px-4 rounded-md hover:bg-blue-700 font-semibold shadow-md transition-colors" title="Export to Outlook (.ics)">
                              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                              <span class="ml-1.5 md:ml-2 text-[10px] md:text-xs uppercase font-bold">Outlook Export</span>
+                         </button>
+
+                         <button id="open-share-modal-btn" class="flex items-center bg-yellow-500 text-black py-1.5 md:py-2 px-3 md:px-4 rounded-md hover:bg-yellow-600 font-semibold shadow-md transition-colors" title="Share Schedule Options">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                             <span class="ml-1.5 md:ml-2 text-[10px] md:text-xs uppercase font-black">Share</span>
                          </button>
 
                          <button id="export-schedule-btn" class="flex items-center bg-green-600 text-white py-1.5 md:py-2 px-3 md:px-4 rounded-md hover:bg-green-700 font-semibold shadow-md transition-colors" title="Export CURRENT WEEK only">
@@ -126,6 +146,9 @@ export function renderSchedule() {
                                 Copy Last Week
                             </button>
                             <div class="flex flex-1 md:flex-none gap-2">
+                                <button id="smart-fill-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white border border-blue-700 py-1.5 px-2 md:px-3 rounded-lg font-bold text-[10px] md:text-xs uppercase tracking-wider transition whitespace-nowrap" title="AI-Powered Auto-Scheduler">
+                                    Smart Fill
+                                </button>
                                 <button id="fill-defaults-btn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 py-1.5 px-2 md:px-3 rounded-lg font-bold text-[10px] md:text-xs uppercase tracking-wider transition whitespace-nowrap" title="Pre-populates Monday-Friday with configured default shift hours">
                                     Fill Defaults
                                 </button>
@@ -144,8 +167,12 @@ export function renderSchedule() {
             </div>
         `;
 
-        document.getElementById('view-mode-editor').onclick = () => { app.scheduleViewMode = 'editor'; saveState(); renderSchedule(); };
-        document.getElementById('view-mode-calendar').onclick = () => { app.scheduleViewMode = 'calendar'; saveState(); renderSchedule(); };
+        document.getElementById('view-mode-editor').onclick = () => { app.scheduleViewMode = 'editor'; app.scheduleViewType = 'weekly'; saveState(); renderSchedule(); };
+        document.getElementById('view-mode-calendar').onclick = () => { app.scheduleViewMode = 'calendar'; app.scheduleViewType = 'weekly'; saveState(); renderSchedule(); };
+
+        document.getElementById('view-type-daily').onclick = () => { app.scheduleViewType = 'daily'; saveState(); renderSchedule(); };
+        document.getElementById('view-type-weekly').onclick = () => { app.scheduleViewType = 'weekly'; saveState(); renderSchedule(); };
+        document.getElementById('view-type-monthly').onclick = () => { app.scheduleViewType = 'monthly'; saveState(); renderSchedule(); };
 
         const toggleHorizontalBtn = document.getElementById('toggle-horizontal-view');
         if (toggleHorizontalBtn) {
@@ -261,6 +288,28 @@ export function renderSchedule() {
             );
         };
 
+        const smartFillBtn = document.getElementById('smart-fill-btn');
+        if (smartFillBtn) {
+            smartFillBtn.onclick = () => {
+                showConfirm(
+                    "Smart Fill Schedule",
+                    "Smart Fill will automatically assign opening, closing, and standard shifts for the week. It ensures at least 2 openers and 2 closers each day while respecting existing leave logs. Proceed?",
+                    () => {
+                        runSmartFill();
+                        renderSchedule();
+                        showToast("Smart Fill Complete", "Shifts have been automatically distributed.", "success");
+                    },
+                    "Run Smart Fill",
+                    false
+                );
+            };
+        }
+
+        const openShareModalBtn = document.getElementById('open-share-modal-btn');
+        if (openShareModalBtn) {
+            openShareModalBtn.onclick = () => openShareModal();
+        }
+
         document.getElementById('export-schedule-btn').onclick = () => {
             exportScheduleToSpreadsheet();
         };
@@ -340,7 +389,23 @@ export function renderSchedule() {
 
         if (app.scheduleViewMode === 'editor' || app.layoutOrientation === 'vertical') {
             attachEditorListeners(weekSchedules, days);
+        } else if (app.scheduleViewType === 'daily' || app.scheduleViewType === 'monthly') {
+            attachCalendarViewListeners();
         }
+    }
+
+    function attachCalendarViewListeners() {
+        const prevDayBtn = document.getElementById('day-prev-btn');
+        if (prevDayBtn) prevDayBtn.onclick = () => { app.dailyCalendarDate.setDate(app.dailyCalendarDate.getDate() - 1); saveState(); renderSchedule(); };
+
+        const nextDayBtn = document.getElementById('day-next-btn');
+        if (nextDayBtn) nextDayBtn.onclick = () => { app.dailyCalendarDate.setDate(app.dailyCalendarDate.getDate() + 1); saveState(); renderSchedule(); };
+
+        const prevMonthBtn = document.getElementById('month-prev-btn');
+        if (prevMonthBtn) prevMonthBtn.onclick = () => { app.monthlyCalendarDate.setMonth(app.monthlyCalendarDate.getMonth() - 1); saveState(); renderSchedule(); };
+
+        const nextMonthBtn = document.getElementById('month-next-btn');
+        if (nextMonthBtn) nextMonthBtn.onclick = () => { app.monthlyCalendarDate.setMonth(app.monthlyCalendarDate.getMonth() + 1); saveState(); renderSchedule(); };
     }
 
 export function renderScheduleEditor(weekSchedules, days) {
@@ -1271,3 +1336,258 @@ export function openSchedModal(employeeId, day, weekDate) {
 
         modalEl.classList.add('is-open');
     }
+
+export function renderScheduleMonthly() {
+        const date = app.monthlyCalendarDate || new Date();
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const monthName = date.toLocaleString('default', { month: 'long' });
+
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 is Sunday
+
+        // Adjust for Monday start (0=Mon, 6=Sun)
+        let firstDayIndex = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+
+        const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        // Get all schedules for the month
+        const weeksInMonth = [];
+        let currentIterDate = new Date(year, month, 1);
+        // Go back to the Monday of the first week
+        currentIterDate.setDate(currentIterDate.getDate() - firstDayIndex);
+
+        while (currentIterDate.getFullYear() < year || (currentIterDate.getFullYear() === year && currentIterDate.getMonth() <= month)) {
+            weeksInMonth.push(getMondayDateString(new Date(currentIterDate)));
+            currentIterDate.setDate(currentIterDate.getDate() + 7);
+        }
+
+        const monthlySchedules = {};
+        weeksInMonth.forEach(w => {
+            monthlySchedules[w] = getWeeklySchedule(w);
+        });
+
+        const calendarCells = [];
+        // Pad start
+        for (let i = 0; i < firstDayIndex; i++) calendarCells.push('<div class="bg-gray-50 border-r border-b border-gray-200 min-h-[120px]"></div>');
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const currentDayDate = new Date(year, month, d);
+            const weekStr = getMondayDateString(currentDayDate);
+            const dayNameShort = daysOfWeek[currentDayDate.getDay() === 0 ? 6 : currentDayDate.getDay() - 1];
+
+            const daySchedules = monthlySchedules[weekStr];
+            const activeShifts = [];
+
+            daySchedules.forEach(s => {
+                const dayData = s.days[dayNameShort];
+                if (dayData && dayData.active && !['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(dayData.type.toUpperCase())) {
+                    const emp = app.employees.find(e => e.id === s.employeeId);
+                    if (emp) activeShifts.push({ name: emp.name, shift: `${format12HourTime(dayData.shiftIn)}-${format12HourTime(dayData.shiftOut)}` });
+                }
+            });
+
+            calendarCells.push(`
+                <div class="bg-white border-r border-b border-gray-200 min-h-[120px] p-2 flex flex-col gap-1 overflow-hidden">
+                    <span class="text-xs font-black text-gray-400">${d}</span>
+                    <div class="flex flex-col gap-1 overflow-y-auto max-h-[100px]">
+                        ${activeShifts.map(s => `
+                            <div class="text-[9px] bg-blue-50 text-blue-700 px-1 py-0.5 rounded border border-blue-100 truncate font-bold" title="${s.name}: ${s.shift}">
+                                ${s.name.split(' ')[0]}: ${s.shift}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `);
+        }
+
+        return `
+            <div class="bg-white shadow-xl rounded-xl border border-gray-200 overflow-hidden max-w-6xl mx-auto">
+                <div class="bg-[#f3f4f6] p-4 border-b border-gray-200 flex justify-between items-center">
+                    <div class="flex flex-col">
+                        <h2 class="text-xl font-black text-gray-800 uppercase tracking-tight">${monthName} ${year}</h2>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Full Monthly Shift Calendar</p>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white p-1 rounded-lg border border-gray-200">
+                        <button id="month-prev-btn" class="p-1 hover:bg-gray-100 rounded transition">&lt;</button>
+                        <span class="text-xs font-black px-2">${monthName}</span>
+                        <button id="month-next-btn" class="p-1 hover:bg-gray-100 rounded transition">&gt;</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 bg-gray-100">
+                    ${daysOfWeek.map(d => `<div class="bg-gray-50 border-r border-b border-gray-200 p-2 text-[10px] font-black text-gray-400 text-center uppercase tracking-widest">${d}</div>`).join('')}
+                    ${calendarCells.join('')}
+                </div>
+            </div>
+        `;
+    }
+
+export function renderScheduleDaily(weekSchedules, days) {
+        const date = app.dailyCalendarDate || new Date();
+        const weekStr = getMondayDateString(date);
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const dayName = dayNames[date.getDay() === 0 ? 6 : date.getDay() - 1];
+
+        const daySchedules = getWeeklySchedule(weekStr);
+        const hours = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
+
+        const hourHeaders = hours.map(h => `<div class="flex-1 text-center text-[9px] font-black text-gray-400 border-l border-gray-100 py-1">${format12Hour(`${h}:00`)}</div>`);
+
+        const rowsHtml = app.employees.map(emp => {
+            const empSched = daySchedules.find(s => s.employeeId === emp.id);
+            const dayData = empSched ? empSched.days[dayName] : null;
+
+            let barHtml = '';
+            if (dayData && dayData.active && !['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(dayData.type.toUpperCase())) {
+                const start = hhmmToHours(dayData.shiftIn);
+                const end = hhmmToHours(dayData.shiftOut);
+                const left = ((start - 7) / 12) * 100;
+                const width = ((end - start) / 12) * 100;
+
+                barHtml = `
+                    <div class="absolute h-6 top-1/2 -translate-y-1/2 bg-blue-500 rounded-md shadow-sm flex items-center justify-center overflow-hidden border border-blue-600 group/bar" style="left: ${left}%; width: ${width}%;">
+                        <span class="text-[9px] font-black text-white px-1 truncate">${format12HourTime(dayData.shiftIn)} - ${format12HourTime(dayData.shiftOut)}</span>
+                    </div>
+                `;
+            } else if (dayData && dayData.active) {
+                barHtml = `<div class="absolute inset-0 bg-yellow-50 flex items-center justify-center text-[10px] font-black text-yellow-700 uppercase tracking-widest opacity-50">${dayData.type}</div>`;
+            }
+
+            return `
+                <div class="flex border-b border-gray-100 hover:bg-gray-50 transition">
+                    <div class="w-32 p-3 border-r border-gray-200 shrink-0 bg-white">
+                        <div class="text-xs font-black text-gray-800 truncate">${emp.name}</div>
+                        <div class="text-[9px] text-gray-400 font-bold uppercase tracking-tight">${emp.role || 'Staff'}</div>
+                    </div>
+                    <div class="flex-grow relative h-12 bg-white">
+                        <div class="absolute inset-0 flex">${hours.map(() => `<div class="flex-1 border-l border-gray-50"></div>`).join('')}</div>
+                        ${barHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Coverage Heatmap
+        const coverage = hours.map(h => {
+            let count = 0;
+            daySchedules.forEach(s => {
+                const dd = s.days[dayName];
+                if (dd && dd.active && !['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(dd.type.toUpperCase())) {
+                    const start = hhmmToHours(dd.shiftIn);
+                    const end = hhmmToHours(dd.shiftOut);
+                    if (h >= start && h < end) count++;
+                }
+            });
+            return count;
+        });
+
+        const heatmapHtml = coverage.map(c => {
+            let color = 'bg-red-100 text-red-700';
+            if (c >= 3) color = 'bg-green-100 text-green-700';
+            else if (c >= 2) color = 'bg-orange-100 text-orange-700';
+            return `<div class="flex-1 ${color} text-center py-1 text-[10px] font-black border-l border-white/20">${c}</div>`;
+        }).join('');
+
+        return `
+            <div class="bg-white shadow-xl rounded-xl border border-gray-200 overflow-hidden max-w-5xl mx-auto">
+                <div class="bg-[#f3f4f6] p-4 border-b border-gray-200 flex justify-between items-center">
+                    <div class="flex flex-col">
+                        <h2 class="text-xl font-black text-gray-800 uppercase tracking-tight">${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Daily Coverage Timeline</p>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white p-1 rounded-lg border border-gray-200">
+                        <button id="day-prev-btn" class="p-1 hover:bg-gray-100 rounded transition">&lt;</button>
+                        <button id="day-next-btn" class="p-1 hover:bg-gray-100 rounded transition">&gt;</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col">
+                    <div class="flex bg-gray-50 border-b border-gray-200">
+                        <div class="w-32 border-r border-gray-200 shrink-0"></div>
+                        <div class="flex-grow flex text-center font-black text-[10px] text-gray-400 py-1 uppercase tracking-widest">Shift Timeline (7AM - 7PM)</div>
+                    </div>
+
+                    <div class="flex bg-gray-50 border-b border-gray-200">
+                        <div class="w-32 border-r border-gray-200 shrink-0 flex items-center px-3">
+                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Coverage</span>
+                        </div>
+                        <div class="flex-grow flex">${heatmapHtml}</div>
+                    </div>
+
+                    <div class="flex bg-gray-50 border-b border-gray-100">
+                        <div class="w-32 border-r border-gray-200 shrink-0"></div>
+                        <div class="flex-grow flex">${hourHeaders.join('')}</div>
+                    </div>
+
+                    <div class="flex flex-col max-h-[600px] overflow-y-auto">
+                        ${rowsHtml}
+                    </div>
+                </div>
+
+                <div class="p-4 bg-gray-50 border-t border-gray-200 flex gap-4">
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-3 bg-red-100 border border-red-200 rounded"></div><span class="text-[10px] font-bold text-gray-500 uppercase">Understaffed (&lt;2)</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-3 bg-orange-100 border border-orange-200 rounded"></div><span class="text-[10px] font-bold text-gray-500 uppercase">Thin (2)</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-3 bg-green-100 border border-green-200 rounded"></div><span class="text-[10px] font-bold text-gray-500 uppercase">Good (3+)</span></div>
+                </div>
+            </div>
+        `;
+    }
+
+export function runSmartFill() {
+    const sList = getWeeklySchedule(app.scheduleWeekDate);
+    const monday = new Date(app.scheduleWeekDate + 'T12:00:00');
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+    days.forEach((day, index) => {
+        const currentDate = new Date(monday);
+        currentDate.setDate(monday.getDate() + index);
+        const dateStr = currentDate.toISOString().split('T')[0];
+
+        // 1. Identify available employees (not on leave)
+        const availableEmps = app.employees.filter(emp => {
+            const leave = app.logEntries.find(log => log.employeeId === emp.id && log.date === dateStr);
+            return !leave;
+        });
+
+        // Shuffle for randomness
+        availableEmps.sort(() => Math.random() - 0.5);
+
+        // 2. Clear existing for this day
+        sList.forEach(s => {
+            if (!availableEmps.find(e => e.id === s.employeeId)) {
+                // Keep leave status if leave exists (though availableEmps filtered them out)
+                const leave = app.logEntries.find(log => log.employeeId === s.employeeId && log.date === dateStr);
+                if (leave) {
+                    const lt = app.leaveTypes.find(l => l.id === leave.leaveTypeId);
+                    s.days[day] = { active: true, type: lt?.name || 'Vacation', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' };
+                } else {
+                    s.days[day] = { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' };
+                }
+            } else {
+                s.days[day] = { active: false, type: 'OFF', location: '', shiftIn: '', shiftOut: '', breakMins: 0, role: '' };
+            }
+        });
+
+        // 3. Assign 2 Openers
+        const openers = availableEmps.splice(0, 2);
+        openers.forEach(emp => {
+            const s = sList.find(sl => sl.employeeId === emp.id);
+            s.days[day] = { active: true, type: 'Open Branch', location: 'Open Branch', shiftIn: '07:45', shiftOut: '16:15', breakMins: 45, role: emp.role };
+        });
+
+        // 4. Assign 2 Closers
+        const closers = availableEmps.splice(0, 2);
+        closers.forEach(emp => {
+            const s = sList.find(sl => sl.employeeId === emp.id);
+            s.days[day] = { active: true, type: 'Close Branch', location: 'Close Branch', shiftIn: '08:30', shiftOut: '17:15', breakMins: 45, role: emp.role };
+        });
+
+        // 5. Assign rest as standard
+        availableEmps.forEach(emp => {
+            const s = sList.find(sl => sl.employeeId === emp.id);
+            s.days[day] = { active: true, type: 'Regular', location: 'Platform', shiftIn: '08:30', shiftOut: '17:00', breakMins: 45, role: emp.role };
+        });
+    });
+
+    saveState();
+}

@@ -8,7 +8,7 @@ import {
     generateMonthlyCalendarHTML, generateYearlyGridViewHTML, showToast, showConfirm
 } from './modules/ui-components.js';
 import { renderSchedule } from './modules/scheduler.js';
-import { exportToSpreadsheet, importFromExcel } from './modules/exports.js';
+import { exportToSpreadsheet, importFromExcel, openShareModal } from './modules/exports.js';
 
 const mainContent = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
@@ -464,7 +464,10 @@ function renderSetup() {
                             <input type="text" id="github-repo-url" value="${app.githubRepoUrl || ''}" placeholder="https://github.com/user/repo" class="w-full p-2 border border-gray-300 rounded-lg text-sm font-mono">
                         </div>
 
-                        <div class="flex flex-col gap-2">
+                     <div class="flex flex-col gap-2">
+                         <button id="open-share-modal-btn-setup" class="flex items-center justify-center space-x-2 w-full bg-yellow-500 text-black py-2.5 px-4 rounded-lg hover:bg-yellow-600 font-bold shadow-md transition mb-2">
+                             ${ICONS.externalLink || ''} <span>Share Schedule Options</span>
+                         </button>
                             <button id="save-to-cloud-btn" class="flex items-center justify-center space-x-2 w-full bg-emerald-600 text-white py-2.5 px-4 rounded-lg hover:bg-emerald-700 font-bold shadow-md transition ${!app.githubRepoUrl ? 'opacity-50 pointer-events-none' : ''}">
                                 ${ICONS.save || ''} <span>🚀 Save to Cloud (No Copy-Paste)</span>
                             </button>
@@ -880,6 +883,11 @@ function renderSetup() {
                     showToast('Error', 'Failed to copy to clipboard.', 'error');
                 });
             });
+        }
+
+        const openShareSetupBtn = document.getElementById('open-share-modal-btn-setup');
+        if (openShareSetupBtn) {
+            openShareSetupBtn.onclick = () => openShareModal(renderSchedule);
         }
 
         const saveToCloudBtn = document.getElementById('save-to-cloud-btn');

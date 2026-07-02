@@ -348,3 +348,228 @@ export function importFromExcel(file) {
         };
         reader.readAsArrayBuffer(file);
     }
+
+export function openShareModal(renderSchedule) {
+    const modalEl = document.getElementById('share-schedule-modal');
+    const empListEl = document.getElementById('share-employee-list');
+    const startWeekEl = document.getElementById('share-start-week');
+    const endWeekEl = document.getElementById('share-end-week');
+
+    // Populate employee list
+    empListEl.innerHTML = app.employees.map(emp => `
+        <label class="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-md cursor-pointer transition-colors">
+            <input type="checkbox" name="share-emp" value="${emp.id}" checked class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <span class="text-sm font-semibold text-gray-700">${emp.name}</span>
+        </label>
+    `).join('');
+
+    // Default date range: current week to end of month
+    startWeekEl.value = app.scheduleWeekDate;
+    const monday = new Date(app.scheduleWeekDate + 'T12:00:00');
+    const endOfMonth = new Date(monday.getFullYear(), monday.getMonth() + 1, 0);
+
+    // Find last Monday of the month for end week
+    let lastMon = new Date(endOfMonth);
+    while(lastMon.getDay() !== 1) lastMon.setDate(lastMon.getDate() - 1);
+    endWeekEl.value = lastMon.toISOString().split('T')[0];
+
+    let selectedFormat = 'image';
+    const formatBtns = document.querySelectorAll('.share-format-btn');
+    formatBtns.forEach(btn => {
+        btn.onclick = () => {
+            formatBtns.forEach(b => b.classList.remove('border-blue-500', 'bg-blue-50'));
+            btn.classList.add('border-blue-500', 'bg-blue-50');
+            selectedFormat = btn.dataset.format;
+        };
+    });
+    // Set default active format
+    document.querySelector('.share-format-btn[data-format="image"]').click();
+
+    document.getElementById('share-select-all-emps').onclick = () => {
+        document.querySelectorAll('input[name="share-emp"]').forEach(cb => cb.checked = true);
+    };
+    document.getElementById('share-deselect-all-emps').onclick = () => {
+        document.querySelectorAll('input[name="share-emp"]').forEach(cb => cb.checked = false);
+    };
+
+    const closeBtn = document.getElementById('share-modal-close-btn');
+    const cancelBtn = document.getElementById('share-cancel-btn');
+    const confirmBtn = document.getElementById('share-confirm-btn');
+
+    const closeModal = () => modalEl.classList.remove('is-open');
+    closeBtn.onclick = closeModal;
+    cancelBtn.onclick = closeModal;
+
+    confirmBtn.onclick = () => {
+        const selectedEmps = Array.from(document.querySelectorAll('input[name="share-emp"]:checked')).map(cb => cb.value);
+        const startWeek = startWeekEl.value;
+        const endWeek = endWeekEl.value;
+
+        if (selectedEmps.length === 0) {
+            alert("Please select at least one employee.");
+            return;
+        }
+        if (!startWeek || !endWeek) {
+            alert("Please select both start and end weeks.");
+            return;
+        }
+
+        handleShareExport(selectedEmps, startWeek, endWeek, selectedFormat);
+        closeModal();
+    };
+
+    modalEl.classList.add('is-open');
+}
+
+function handleShareExport(employeeIds, startWeekStr, endWeekStr, format) {
+    const weeks = [];
+    let currentWeek = new Date(startWeekStr + 'T12:00:00');
+    const endWeek = new Date(endWeekStr + 'T12:00:00');
+
+    while (currentWeek <= endWeek) {
+        weeks.push(currentWeek.toISOString().split('T')[0]);
+        currentWeek.setDate(currentWeek.getDate() + 7);
+    }
+
+    if (format === 'image') {
+        exportScheduleToImage();
+    } else if (format === 'ics') {
+        employeeIds.forEach(empId => {
+            exportEmployeeScheduleToICS(empId, weeks);
+        });
+    } else if (format === 'excel') {
+        exportBulkScheduleToExcel(employeeIds, weeks);
+    }
+}
+
+export function exportScheduleToImage() {
+    const container = document.getElementById('schedule-view-container');
+    if (!container || typeof html2canvas === 'undefined') {
+        alert("Image export failed: missing container or library.");
+        return;
+    }
+
+    // Hide elements we don't want in picture
+    const hideSelectors = ['#add-employee-inline-btn', '#add-employee-inline-btn-vertical', '.row-delete-inline-btn', '.row-default-btn', '.row-clear-btn'];
+    const hiddenEls = [];
+    hideSelectors.forEach(s => {
+        container.querySelectorAll(s).forEach(el => {
+            if (el.style.display !== 'none') {
+                el.dataset.oldDisplay = el.style.display;
+                el.style.display = 'none';
+                hiddenEls.push(el);
+            }
+        });
+    });
+
+    html2canvas(container, {
+        backgroundColor: '#f3f4f6',
+        scale: 2,
+        logging: false,
+        useCORS: true
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `Team_Schedule_${app.scheduleWeekDate}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        // Restore hidden
+        hiddenEls.forEach(el => el.style.display = el.dataset.oldDisplay || '');
+        showToast('Success', 'Schedule image generated!', 'success');
+    });
+}
+
+export function exportEmployeeScheduleToICS(employeeId, weeks) {
+    const emp = app.employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    let icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Team Schedule//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH'
+    ];
+
+    weeks.forEach(weekDateStr => {
+        const weekSchedules = getWeeklySchedule(weekDateStr);
+        const empSched = weekSchedules.find(s => s.employeeId === employeeId);
+        if (!empSched) return;
+
+        const mondayDate = new Date(weekDateStr + 'T12:00:00');
+        const dayOffsets = { 'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6 };
+
+        Object.entries(empSched.days).forEach(([day, dayData]) => {
+            if (!dayData || !dayData.active) return;
+
+            const eventDate = new Date(mondayDate);
+            eventDate.setDate(mondayDate.getDate() + dayOffsets[day]);
+            const dateStr = eventDate.toISOString().split('T')[0].replace(/-/g, '');
+
+            const typeUpper = (dayData.type || 'Regular').toUpperCase();
+            const isAbsence = ['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(typeUpper);
+
+            if (isAbsence) {
+                const endDate = new Date(eventDate);
+                endDate.setDate(eventDate.getDate() + 1);
+                const endDateStr = endDate.toISOString().split('T')[0].replace(/-/g, '');
+                icsContent.push('BEGIN:VEVENT');
+                icsContent.push(`UID:sched-${weekDateStr}-${employeeId}-${day}`);
+                icsContent.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+                icsContent.push(`DTSTART;VALUE=DATE:${dateStr}`);
+                icsContent.push(`DTEND;VALUE=DATE:${endDateStr}`);
+                icsContent.push(`SUMMARY:${emp.name}: ${typeUpper}`);
+                icsContent.push('END:VEVENT');
+            } else {
+                const startTime = (dayData.shiftIn || '09:00').replace(/:/g, '') + '00';
+                const endTime = (dayData.shiftOut || '17:00').replace(/:/g, '') + '00';
+                icsContent.push('BEGIN:VEVENT');
+                icsContent.push(`UID:sched-${weekDateStr}-${employeeId}-${day}`);
+                icsContent.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+                icsContent.push(`DTSTART:${dateStr}T${startTime}`);
+                icsContent.push(`DTEND:${dateStr}T${endTime}`);
+                icsContent.push(`SUMMARY:${emp.name}: ${dayData.location || 'Work'}`);
+                icsContent.push(`LOCATION:${dayData.location || ''}`);
+                icsContent.push(`DESCRIPTION:Role: ${dayData.role || ''}\\nBreak: ${dayData.breakMins}m`);
+                icsContent.push('END:VEVENT');
+            }
+        });
+    });
+
+    icsContent.push('END:VCALENDAR');
+    const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `Schedule_${emp.name.replace(/ /g, '_')}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+export function exportBulkScheduleToExcel(employeeIds, weeks) {
+    if (typeof XLSX === 'undefined') { alert("Missing XLSX library."); return; }
+    const wb = XLSX.utils.book_new();
+
+    weeks.forEach(weekDateStr => {
+        const weekSchedules = getWeeklySchedule(weekDateStr);
+        const filteredSchedules = weekSchedules.filter(s => employeeIds.includes(s.employeeId));
+
+        const data = [['Employee', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']];
+        filteredSchedules.forEach(sched => {
+            const emp = app.employees.find(e => e.id === sched.employeeId);
+            const row = [emp.name];
+            ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => {
+                const d = sched.days[day];
+                if (!d || !d.active) row.push('OFF');
+                else if (['HOLIDAY', 'VACATION', 'SICK TIME', 'PERSONAL DAY'].includes(d.type.toUpperCase())) row.push(d.type);
+                else row.push(`${d.shiftIn}-${d.shiftOut} (${d.location})`);
+            });
+            data.push(row);
+        });
+
+        const sheet = XLSX.utils.aoa_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, sheet, weekDateStr);
+    });
+
+    XLSX.writeFile(wb, `Bulk_Schedule_Export.xlsx`);
+}
